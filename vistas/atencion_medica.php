@@ -358,7 +358,7 @@ if($colaborador_id != "" || $colaborador_id != null){
                 <ul class="pagination justify-content-center" id="pagination"></ul>
             </nav>
         </div>
-        <?php include("templates/atencionMedicaHorizontal.php"); ?>
+        <?php include("templates/atencionMedicaVertical.php"); ?>
         <?php include("templates/factura.php"); ?>
         <?php include("templates/footer.php"); ?>
         <?php include("templates/footer_facturas.php"); ?>

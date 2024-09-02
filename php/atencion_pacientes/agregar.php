@@ -18,14 +18,27 @@ if(isset($_POST['paciente_consulta'])){//COMPRUEBO SI LA VARIABLE ESTA DIFINIDA
 $fecha = $_POST['fecha'];
 $servicio_id = $_POST['servicio_id'];
 
-$antecedentes = cleanStringStrtolower($_POST['antecedentes']);
-$historia_clinica = cleanStringStrtolower($_POST['historia_clinica']);
-$exame_fisico = cleanStringStrtolower($_POST['exame_fisico']);
-$diagnostico = cleanStringStrtolower($_POST['diagnostico']);
-$seguimiento = cleanStringStrtolower($_POST['seguimiento']);
 $num_hijos = $_POST['num_hijos'];
 $localidad = cleanStringStrtolower($_POST['procedencia']);
-$numero_hijos = cleanStringStrtolower($_POST['num_hijos']);
+$escolaridad = cleanStringStrtolower($_POST['escolaridad']);
+$red_apoyo = cleanStringStrtolower($_POST['red_apoyo']);
+$terapeuta_actual = cleanStringStrtolower($_POST['terapeuta_actual']);
+
+$antecedentes_medicos_no_psiquiatricos = cleanStringStrtolower($_POST['antecedentes_medicos_no_psiquiatricos']);
+$hospitalizaciones = cleanStringStrtolower($_POST['hospitalizaciones']);
+$cirugias = cleanStringStrtolower($_POST['cirugias']);
+$alergias = cleanStringStrtolower($_POST['alergias']);
+$antecedentes_medicos_psiquiatricos = cleanStringStrtolower($_POST['antecedentes_medicos_psiquiatricos']);
+$historia_gineco_obstetrica = cleanStringStrtolower($_POST['historia_gineco_obstetrica']);
+$medicamentos_previos = cleanStringStrtolower($_POST['medicamentos_previos']);
+$medicamentos_actuales = cleanStringStrtolower($_POST['medicamentos_actuales']);
+$legal = cleanStringStrtolower($_POST['legal']);
+$sustancias = cleanStringStrtolower($_POST['sustancias']);
+$rasgos_personalidad = cleanStringStrtolower($_POST['rasgos_personalidad']);
+$informacion_adicional = cleanStringStrtolower($_POST['informacion_adicional']);
+$pendientes = cleanStringStrtolower($_POST['pendientes']);
+$diagnostico = cleanStringStrtolower($_POST['diagnostico']);
+$seguimiento = cleanStringStrtolower($_POST['seguimiento']);
 
 if(isset($_POST['religion_id'])){//COMPRUEBO SI LA VARIABLE ESTA DIFINIDA
 	if($_POST['religion_id'] == ""){
@@ -64,11 +77,12 @@ $update = "UPDATE pacientes
 		religion_id = '$religion_id', 
 		profesion_id = '$profesion_id',
 		localidad = '$localidad',
-		numero_hijos = '$numero_hijos'
+		escolaridad = '$escolaridad',
+		red_apoyo = '$red_apoyo',
+		terapeuta_actual = '$terapeuta_actual'
 	WHERE pacientes_id = '$pacientes_id'";
 $mysqli->query($update) or die($mysqli->error);
 /*##############################################################################################################################################################################################*/
-			
 $query_fecha_nac = "SELECT fecha_nacimiento
 	FROM pacientes
 	WHERE pacientes_id = '$pacientes_id'";
@@ -145,115 +159,156 @@ $query_agenda = "SELECT agenda_id
 $result_agenda = $mysqli->query($query_agenda) or die($mysqli->error); 
 
 //OBTENER CORRELATIVO
-$correlativo = correlativo('atencion_id', 'atenciones_medicas');
+$atencion_id = correlativo('atencion_id', 'atenciones_medicas');
 
-if($historia_clinica != "" && $exame_fisico != "" && $diagnostico != "" && $seguimiento != ""){
-	if($pacientes_id != 0){
-		if($servicio_id != 0){
-			if($result_agenda->num_rows < 3){
-				if($result_existencia->num_rows < 3){		
-					$insert = "INSERT INTO atenciones_medicas VALUES('$correlativo','$pacientes_id','$anos','$fecha','$antecedentes','$historia_clinica','$exame_fisico','$diagnostico','$seguimiento','$paciente','$servicio_id','$colaborador_id','$num_hijos','$estado','$fecha_registro')";
-					$query = $mysqli->query($insert) or die($mysqli->error);
+if($pacientes_id != 0){
+	if($servicio_id != 0){
+		if($result_agenda->num_rows < 3){
+			if($result_existencia->num_rows < 3){		
+				$insert = "INSERT INTO atenciones_medicas (
+					atencion_id,
+					pacientes_id,
+					edad,
+					fecha,
+					antecedentes_medicos_no_psiquiatricos,
+					hospitalizaciones,
+					cirugias,
+					alergias,
+					antecedentes_medicos_psiquiatricos,
+					historia_gineco_obstetrica,
+					medicamentos_previos,
+					medicamentos_actuales,
+					legal,
+					sustancias,
+					rasgos_personalidad,
+					informacion_adicional,
+					pendientes,
+					diagnostico,
+					seguimiento,
+					paciente,
+					servicio_id,
+					colaborador_id,
+					num_hijos,
+					estado,
+					fecha_registro
+					) VALUES (
+					'$atencion_id',
+					'$pacientes_id',
+					'$anos',
+					'$fecha',
+					'$antecedentes_medicos_no_psiquiatricos',
+					'$hospitalizaciones',
+					'$cirugias',
+					'$alergias',
+					'$antecedentes_medicos_psiquiatricos',
+					'$historia_gineco_obstetrica',
+					'$medicamentos_previos',
+					'$medicamentos_actuales',
+					'$legal',
+					'$sustancias',
+					'$rasgos_personalidad',
+					'$informacion_adicional',
+					'$pendientes',
+					'$diagnostico',
+					'$seguimiento',
+					'$paciente',
+					'$servicio_id',
+					'$colaborador_id',
+					'$num_hijos',
+					'$estado',
+					'$fecha_registro'
+					)";
 
-					if($query){
-						$datos = array(
-							0 => "Almacenado", 
-							1 => "Registro Almacenado Correctamente", 
-							2 => "success",
-							3 => "btn-primary",
-							4 => "formulario_atenciones",
-							5 => "Registro",
-							6 => "AtencionMedica",//FUNCION DE LA TABLA QUE LLAMAREMOS PARA QUE ACTUALICE (DATATABLE BOOSTRAP)
-							7 => "modal_registro_atenciones", //Modals Para Cierre Automatico
-							8 => $correlativo,
-							9 => "Guardar",
-						);
-							  
-						$observacion = "Usuario agregado de forma manual";
-						$comentario = "";
-						$preclinica = 1;
-						$postclinica = 0;
-						$reprogramo = 2; //1. Sí 2. No
-						$status_id = 0;
-						
-						/*********************************************************************************************************************************************************************/
-						//AGREGAMOS LA AGENDA DEL PACINETE
-						$correlativo_agenda = correlativo('agenda_id', 'agenda');		
-						$insert_agenda = "INSERT INTO agenda VALUES ('$correlativo_agenda','$pacientes_id','$expediente','$colaborador_id','$hora','$fecha_cita','$fecha_cita_end','$fecha_registro','$status','$color','$observacion','$colaborador_id','$servicio_id','$comentario','$preclinica','$postclinica','$reprogramo','$paciente','$status_id')";
-						
-						$mysqli->query($insert_agenda) or die($mysqli->error);		
-						/*********************************************************************************************************************************************************************/
-						/*********************************************************************************************************************************************************************/
-						//INGRESAR REGISTROS EN LA ENTIDAD HISTORIAL
-						$historial_numero = historial();
-						$estado_historial = "Agregar";
-						$observacion_historial = "Se ha agregado una nueva atención para este paciente: $paciente_nombre con identidad n° $identidad";
-						$modulo = "Atención Pacientes";
-						$insert = "INSERT INTO historial 
-						   VALUES('$historial_numero','$pacientes_id','$expediente','$modulo','$correlativo_agenda','$colaborador_id','$servicio_id','$fecha','$estado_historial','$observacion_historial','$colaborador_id','$fecha_registro')";	 
-						$mysqli->query($insert) or die($mysqli->error);
-						/*********************************************************************************************************************************************************************/
-					}else{
-						$datos = array(
-							0 => "Error", 
-							1 => "No se puedo almacenar este registro, los datos son incorrectos por favor corregir", 
-							2 => "error",
-							3 => "btn-danger",
-							4 => "",
-							5 => "",			
-						);
-					}
+				$query = $mysqli->query($insert) or die($mysqli->error);					  
+
+				if($query){
+					$datos = array(
+						0 => "Almacenado", 
+						1 => "Registro Almacenado Correctamente", 
+						2 => "success",
+						3 => "btn-primary",
+						4 => "formulario_atenciones",
+						5 => "Registro",
+						6 => "AtencionMedica",//FUNCION DE LA TABLA QUE LLAMAREMOS PARA QUE ACTUALICE (DATATABLE BOOSTRAP)
+						7 => "modal_registro_atenciones", //Modals Para Cierre Automatico
+						8 => $atencion_id,
+						9 => "Guardar",
+					);
+							
+					$observacion = "Usuario agregado de forma manual";
+					$comentario = "";
+					$preclinica = 1;
+					$postclinica = 0;
+					$reprogramo = 2; //1. Sí 2. No
+					$status_id = 0;
+					
+					/*********************************************************************************************************************************************************************/
+					//AGREGAMOS LA AGENDA DEL PACINETE
+					$correlativo_agenda = correlativo('agenda_id', 'agenda');		
+					$insert_agenda = "INSERT INTO agenda VALUES ('$correlativo_agenda','$pacientes_id','$expediente','$colaborador_id','$hora','$fecha_cita','$fecha_cita_end','$fecha_registro','$status','$color','$observacion','$colaborador_id','$servicio_id','$comentario','$preclinica','$postclinica','$reprogramo','$paciente','$status_id')";
+					
+					$mysqli->query($insert_agenda) or die($mysqli->error);		
+					/*********************************************************************************************************************************************************************/
+					/*********************************************************************************************************************************************************************/
+					//INGRESAR REGISTROS EN LA ENTIDAD HISTORIAL
+					$historial_numero = historial();
+					$estado_historial = "Agregar";
+					$observacion_historial = "Se ha agregado una nueva atención para este paciente: $paciente_nombre con identidad n° $identidad";
+					$modulo = "Atención Pacientes";
+					$insert = "INSERT INTO historial 
+						VALUES('$historial_numero','$pacientes_id','$expediente','$modulo','$correlativo_agenda','$colaborador_id','$servicio_id','$fecha','$estado_historial','$observacion_historial','$colaborador_id','$fecha_registro')";	 
+					$mysqli->query($insert) or die($mysqli->error);
+					/*********************************************************************************************************************************************************************/
 				}else{
 					$datos = array(
 						0 => "Error", 
-						1 => "Lo sentimos este registro ya existe no se puede almacenar", 
+						1 => "No se puedo almacenar este registro, los datos son incorrectos por favor corregir", 
 						2 => "error",
 						3 => "btn-danger",
 						4 => "",
-						5 => "",		
+						5 => "",			
 					);
 				}
 			}else{
 				$datos = array(
 					0 => "Error", 
-					1 => "Lo sentimos, este paciente ya cuenta con agenda almacenada para este día, por favor, revise sus registros pendientes", 
+					1 => "Lo sentimos este registro ya existe no se puede almacenar", 
 					2 => "error",
 					3 => "btn-danger",
 					4 => "",
-					5 => "",			
+					5 => "",		
 				);
 			}
 		}else{
 			$datos = array(
 				0 => "Error", 
-				1 => "Lo sentimos, debe seleccionar un consultorio antes de continuar, por favor corregir", 
+				1 => "Lo sentimos, este paciente ya cuenta con agenda almacenada para este día, por favor, revise sus registros pendientes", 
 				2 => "error",
 				3 => "btn-danger",
 				4 => "",
 				5 => "",			
 			);
-		}		
+		}
 	}else{
 		$datos = array(
 			0 => "Error", 
-			1 => "Lo sentimos, debe seleccionar un paciente antes de continuar, por favor corregir", 
+			1 => "Lo sentimos, debe seleccionar un consultorio antes de continuar, por favor corregir", 
 			2 => "error",
 			3 => "btn-danger",
 			4 => "",
 			5 => "",			
-		);	
-	}
+		);
+	}		
 }else{
 	$datos = array(
 		0 => "Error", 
-		1 => "Lo sentimos, valide que los Antecedentes, Historia Clínica, Examen Físico, Diagnostico  y Seguimiento no deben quedar vacíos, por favor corregir", 
+		1 => "Lo sentimos, debe seleccionar un paciente antes de continuar, por favor corregir", 
 		2 => "error",
 		3 => "btn-danger",
 		4 => "",
 		5 => "",			
-	);		
+	);	
 }
 
 echo json_encode($datos);
 $mysqli->close();//CERRAR CONEXIÓN
-?>

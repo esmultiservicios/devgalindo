@@ -287,10 +287,7 @@ function editarRegistro(pacientes_id, agenda_id) {
 
                     $('#formulario_atenciones #fecha').val(array[7]);
                     $('#formulario_atenciones #fecha_nac').val(array[8]);
-                    $('#formulario_atenciones #antecedentes').val(array[9]);
-                    $('#formulario_atenciones #historia_clinica').val(array[10]);
-                    $('#formulario_atenciones #exame_fisico').val(array[11]);
-                    $('#formulario_atenciones #diagnostico').val(array[12]);
+
                     $('#formulario_atenciones #seguimiento_read').val(array[13]);
                     $('#formulario_atenciones #servicio_id').val(array[14]);
                     $('#formulario_atenciones #servicio_id').selectpicker('refresh');
@@ -299,6 +296,28 @@ function editarRegistro(pacientes_id, agenda_id) {
                     $('#formulario_atenciones #estado_civil').selectpicker('refresh');
 
                     $('#formulario_atenciones #num_hijos').val(array[16]);
+
+                    $('#formulario_atenciones #escolaridad').val(array[17]);
+                    $('#formulario_atenciones #red_apoyo').val(array[18]);
+                    $('#formulario_atenciones #terapeuta_actual').val(array[19]);
+
+                    $('#formulario_atenciones #antecedentes_medicos_no_psiquiatricos').val(array[9]);
+                    $('#formulario_atenciones #hospitaliaciones').val(array[10]);
+                    $('#formulario_atenciones #cirugias').val(array[11]);
+
+                    $('#formulario_atenciones #alergias').val(array[12]);
+                    $('#formulario_atenciones #antecedentes_medicos_psiquiatricos').val(array[20]);
+                    $('#formulario_atenciones #historia_gineco_obstetrica').val(array[21]);
+                    $('#formulario_atenciones #medicamentos_previos').val(array[22]);
+                    $('#formulario_atenciones #medicamentos_actuales').val(array[23]);
+                    $('#formulario_atenciones #legal').val(array[24]);
+                    $('#formulario_atenciones #sustancias').val(array[25]);
+                    $('#formulario_atenciones #rasgos_personalidad').val(array[26]);
+                    $('#formulario_atenciones #informacion_adicional').val(array[27]);
+                    $('#formulario_atenciones #pendientes').val(array[28]);
+                    $('#formulario_atenciones #diagnostico').val(array[29]);
+                    $('#formulario_atenciones #seguimiento').val(array[30]);
+
                     $("#formulario_atenciones #fecha").attr('readonly', true);
                     $("#edi_atencion").attr('disabled', false);
                     $("#formulario_atenciones #label_servicio").show();
@@ -316,11 +335,9 @@ function editarRegistro(pacientes_id, agenda_id) {
                         'action': '<?php echo SERVERURL; ?>php/atencion_pacientes/agregarRegistro.php'
                     });
 
-                    caracteresSeguimiento();
-                    caracteresDiagnostico();
-                    caracteresExamenFisico();
-                    caracteresHistoriaClinica();
-                    caracteresAntecedentes();
+                    inicializarContadores(limites); // Iniciar el contador de caracteres con los límites
+                    inicializarSpeechRecognition(
+                        limites); // Inicializar reconocimiento de voz con los límites
 
                     FormAtencionMedica();
 
@@ -350,28 +367,6 @@ function editarRegistro(pacientes_id, agenda_id) {
         });
     }
 }
-
-
-//INICIO ABRIR VENTANA MODAL PARA EL METODO DE PAGO
-function metodoPago(pacientes_id, agenda_id, colaborador_id, tipo_tarifa) {
-
-    //CERRAMOS EL FORMULARIO DE PACIENTES
-    //$("#modal_registro_atenciones .close").click()
-
-    //MOSTRAMOS EL FORMULARIO PARA EL METODO DE PAGO
-    $('#formulario_metodoPago #pro').val('Registro');
-    $('#formulario_metodoPago #pacientes_id').val(pacientes_id);
-    $('#formulario_metodoPago #agenda_id').val(agenda_id);
-    $('#formulario_metodoPago #nombre').val(getNombrePaciente(pacientes_id));
-    $('#formulario_metodoPago #monto').val(getMonto(getColaborador_id(), agenda_id, tipo_tarifa));
-    $("#formulario_metodoPago #reg").attr('disabled', false);
-    $('#metodoPago').modal({
-        show: true,
-        keyboard: false,
-        backdrop: 'static'
-    });
-}
-//FIN ABRIR VENTANA MODAL PARA EL METODO DE PAGO
 
 //INICIO FUNCION AUSENCIA DE USUARIOS
 function nosePresentoRegistro(pacientes_id, agenda_id) {
@@ -473,128 +468,99 @@ function eliminarRegistro(agenda_id, comentario, fecha) {
 }
 //FIN FUNCION AUSENCIA DE USUARIOS
 
-//ATENCION A USUARIOS
-$('#formulario_atenciones #antecedentes').keyup(function() {
-    var max_chars = 3200;
-    var chars = $(this).val().length;
-    var diff = max_chars - chars;
+// Definir los límites de caracteres globalmente
+var limites = {
+    'alergias': 3200,
+    'seguimiento': 3200,
+    'antecedentes_medicos_psiquiatricos': 3200,
+    'historia_gineco_obstetrica': 3200,
+    'medicamentos_previos': 3200,
+    'medicamentos_actuales': 3200,
+    'legal': 3200,
+    'sustancias': 3200,
+    'rasgos_personalidad': 3200,
+    'informacion_adicional': 3200,
+    'pendientes': 3200,
+    'diagnostico': 3200,
+    'antecedentes_medicos_no_psiquiatricos': 3200,
+    'hospitalizaciones': 3200,
+    'cirugias': 3200
+};
 
-    $('#formulario_atenciones #charNum_antecedentes').html(diff + ' Caracteres');
-
-    if (diff == 0) {
-        return false;
-    }
+$(document).ready(function() {
+    inicializarContadores(limites); // Iniciar el contador de caracteres con los límites
+    inicializarSpeechRecognition(limites); // Inicializar reconocimiento de voz con los límites
 });
 
-function caracteresAntecedentes() {
-    var max_chars = 3200;
-    var chars = $('#formulario_atenciones #antecedentes').val().length;
-    var diff = max_chars - chars;
+function inicializarContadores(limites) {
+    Object.keys(limites).forEach(function(campo) {
+        $('#' + campo).on('input', function() {
+            actualizarCaracteres(campo, 'charNum_' + campo, limites[campo]);
+        });
 
-    $('#formulario_atenciones #charNum_antecedentes').html(diff + ' Caracteres');
-
-    if (diff == 0) {
-        return false;
-    }
+        // Para inicializar el contador cuando se carga la página
+        actualizarCaracteres(campo, 'charNum_' + campo, limites[campo]);
+    });
 }
 
-$('#formulario_atenciones #historia_clinica').keyup(function() {
-    var max_chars = 3200;
-    var chars = $(this).val().length;
-    var diff = max_chars - chars;
+function actualizarCaracteres(campo, contadorId, max_chars) {
+    var texto = $('#' + campo).val();
+    var longitudTexto = texto.length;
 
-    $('#formulario_atenciones #charNum_historia').html(diff + ' Caracteres');
-
-    if (diff == 0) {
-        return false;
+    // Si se supera el límite de caracteres, cortar el texto al límite
+    if (longitudTexto > max_chars) {
+        $('#' + campo).val(texto.substring(0, max_chars));
+        longitudTexto = max_chars;
     }
-});
 
-function caracteresHistoriaClinica() {
-    var max_chars = 3200;
-    var chars = $('#formulario_atenciones #historia_clinica').val().length;
-    var diff = max_chars - chars;
-
-    $('#formulario_atenciones #charNum_historia').html(diff + ' Caracteres');
-
-    if (diff == 0) {
-        return false;
-    }
+    $('#' + contadorId).text(longitudTexto + '/' + max_chars); // Muestra el número de caracteres y el límite
 }
 
-$('#formulario_atenciones #exame_fisico').keyup(function() {
-    var max_chars = 3200;
-    var chars = $(this).val().length;
-    var diff = max_chars - chars;
+function inicializarSpeechRecognition(limites) {
+    Object.keys(limites).forEach(function(campo) {
+        // Ocultar los botones de parada al iniciar
+        $('#formulario_atenciones #search_' + campo + '_stop').hide();
 
-    $('#formulario_atenciones #charNum_examen').html(diff + ' Caracteres');
+        // Inicializar el reconocimiento de voz
+        var recognition = new webkitSpeechRecognition();
+        recognition.continuous = true;
+        recognition.lang = "es";
 
-    if (diff == 0) {
-        return false;
-    }
-});
+        // Evento al hacer clic en el botón de inicio de reconocimiento
+        $('#formulario_atenciones #search_' + campo + '_start').on('click', function(event) {
+            $('#formulario_atenciones #search_' + campo + '_start').hide();
+            $('#formulario_atenciones #search_' + campo + '_stop').show();
+            recognition.start();
 
-function caracteresExamenFisico() {
-    var max_chars = 3200;
-    var chars = $('#formulario_atenciones #exame_fisico').val().length;
-    var diff = max_chars - chars;
+            recognition.onresult = function(event) {
+                var finalResult = '';
+                var valor_anterior = $('#formulario_atenciones #' + campo).val();
+                for (var i = event.resultIndex; i < event.results.length; ++i) {
+                    if (event.results[i].isFinal) {
+                        finalResult = event.results[i][0].transcript;
 
-    $('#formulario_atenciones #charNum_examen').html(diff + ' Caracteres');
+                        // Combinar texto anterior con el nuevo resultado, respetando el límite de caracteres
+                        var nuevoTexto = valor_anterior + ' ' + finalResult;
+                        if (nuevoTexto.length > limites[campo]) {
+                            nuevoTexto = nuevoTexto.substring(0, limites[campo]);
+                        }
+                        $('#formulario_atenciones #' + campo).val(nuevoTexto);
+                        actualizarCaracteres(campo, 'charNum_' + campo, limites[campo]);
+                    }
+                }
+            };
 
-    if (diff == 0) {
-        return false;
-    }
-}
+            return false;
+        });
 
-$('#formulario_atenciones #diagnostico').keyup(function() {
-    var max_chars = 3200;
-    var chars = $(this).val().length;
-    var diff = max_chars - chars;
-
-    $('#formulario_atenciones #charNum_diagnostico').html(diff + ' Caracteres');
-
-    if (diff == 0) {
-        return false;
-    }
-});
-
-function caracteresDiagnostico() {
-    var max_chars = 3200;
-    var chars = $('#formulario_atenciones #diagnostico').val().length;
-    var diff = max_chars - chars;
-
-    $('#formulario_atenciones #charNum_diagnostico').html(diff + ' Caracteres');
-
-    if (diff == 0) {
-        return false;
-    }
-}
-
-$('#formulario_atenciones #seguimiento').keyup(function() {
-    var max_chars = 3200;
-    var chars = $(this).val().length;
-    var diff = max_chars - chars;
-
-    $('#formulario_atenciones #charNum_seguimiento').html(diff + ' Caracteres');
-
-    if (diff == 0) {
-        return false;
-    }
-});
-
-function caracteresSeguimiento() {
-    var max_chars = 3200;
-    var chars = $('#formulario_atenciones #seguimiento').val().length; // Obtiene la longitud del texto
-    var diff = max_chars - chars;
-
-    $('#formulario_atenciones #charNum_seguimiento').html(diff + ' Caracteres restantes');
-
-    // Si el número de caracteres restantes es menor o igual a 0, deshabilita el input o realiza alguna acción
-    if (diff <= 0) {
-        $('#formulario_atenciones #seguimiento').val($('#formulario_atenciones #seguimiento').val().substring(0,
-            max_chars));
-        $('#formulario_atenciones #charNum_seguimiento').html('0 Caracteres restantes');
-    }
+        // Evento al hacer clic en el botón de detener reconocimiento
+        $('#formulario_atenciones #search_' + campo + '_stop').on('click', function(event) {
+            recognition.stop();
+            $('#formulario_atenciones #search_' + campo + '_stop').hide();
+            $('#formulario_atenciones #search_' + campo + '_start').show();
+            return false;
+        });
+    });
 }
 
 //TANSITO ENVIADA
@@ -650,11 +616,34 @@ $(document).ready(function(e) {
                     $('#formulario_atenciones #estado_civil').selectpicker('refresh');
 
                     $('#formulario_atenciones #paciente_consulta').val(array[6]);
-                    $('#formulario_atenciones #antecedentes').val(array[7]);
-                    $('#formulario_atenciones #historia_clinica').val(array[8]);
-                    $('#formulario_atenciones #exame_fisico').val(array[9]);
+
+                    $('#formulario_atenciones #antecedentes_medicos_no_psiquiatricos').val(
+                        array[7]);
+                    $('#formulario_atenciones #hospitalizaciones').val(array[8]);
+                    $('#formulario_atenciones #cirugias').val(array[9]);
+
+                    $('#formulario_atenciones #alergias').val(array[14]);
+                    $('#formulario_atenciones #antecedentes_medicos_psiquiatricos').val(
+                        array[15]);
+                    $('#formulario_atenciones #historia_gineco_obstetrica').val(array[16]);
+                    $('#formulario_atenciones #medicamentos_previos').val(array[17]);
+                    $('#formulario_atenciones #medicamentos_actuales').val(array[18]);
+                    $('#formulario_atenciones #legal').val(array[19]);
+                    $('#formulario_atenciones #sustancias').val(array[20]);
+                    $('#formulario_atenciones #rasgos_personalidad').val(array[21]);
+                    $('#formulario_atenciones #informacion_adicional').val(array[22]);
+                    $('#formulario_atenciones #pendientes').val(array[23]);
+                    $('#formulario_atenciones #diagnostico').val(array[24]);
+
+                    $('#formulario_atenciones #num_hijos').val(array[26]);
+
+                    $('#formulario_atenciones #escolaridad').val(array[27]);
+                    $('#formulario_atenciones #red_apoyo').val(array[28]);
+                    $('#formulario_atenciones #terapeuta_actual').val(array[29]);
+
                     $('#formulario_atenciones #seguimiento_read').val(array[10]);
                     $('#formulario_atenciones #diagnostico').val(array[11]);
+
                     $('#formulario_atenciones #fecha_nac').val(array[12]);
                     $("#reg_atencion").attr('disabled', false);
                     return false;
@@ -1973,173 +1962,6 @@ function showFactura(atencion_id) {
         }
     });
 }
-
-$(document).ready(function() {
-    $('#formulario_atenciones #search_antecedentes_stop').hide();
-    $('#formulario_atenciones #search_historia_clinica_stop').hide();
-    $('#formulario_atenciones #search_exame_fisico_stop').hide();
-    $('#formulario_atenciones #search_diagnostico_stop').hide();
-    $('#formulario_atenciones #search_seguimiento_stop').hide();
-
-    var recognition = new webkitSpeechRecognition();
-    recognition.continuous = true;
-    recognition.lang = "es";
-
-    $('#formulario_atenciones #search_antecedentes_start').on('click', function(event) {
-        $('#formulario_atenciones #search_antecedentes_start').hide();
-        $('#formulario_atenciones #search_antecedentes_stop').show();
-        recognition.start();
-
-        recognition.onresult = function(event) {
-            finalResult = '';
-            var valor_anterior = $('#formulario_atenciones #antecedentes').val();
-            for (var i = event.resultIndex; i < event.results.length; ++i) {
-                if (event.results[i].isFinal) {
-                    finalResult = event.results[i][0].transcript;
-                    if (valor_anterior != "") {
-                        $('#formulario_atenciones #antecedentes').val(valor_anterior + ' ' +
-                            finalResult);
-                        caracteresAntecedentes();
-                    } else {
-                        $('#formulario_atenciones #antecedentes').val(finalResult);
-                        caracteresAntecedentes();
-                    }
-                }
-            }
-        };
-        return false;
-    });
-
-    $('#formulario_atenciones #search_historia_clinica_start').on('click', function(event) {
-        $('#formulario_atenciones #search_historia_clinica_start').hide();
-        $('#formulario_atenciones #search_historia_clinica_stop').show();
-        recognition.start();
-
-        recognition.onresult = function(event) {
-            finalResult = '';
-            var valor_anterior = $('#formulario_atenciones #historia_clinica').val();
-            for (var i = event.resultIndex; i < event.results.length; ++i) {
-                if (event.results[i].isFinal) {
-                    finalResult = event.results[i][0].transcript;
-                    if (valor_anterior != "") {
-                        $('#formulario_atenciones #historia_clinica').val(valor_anterior + ' ' +
-                            finalResult);
-                        caracteresHistoriaClinica();
-                    } else {
-                        $('#formulario_atenciones #historia_clinica').val(finalResult);
-                        caracteresHistoriaClinica();
-                    }
-                }
-            }
-        };
-        return false;
-    });
-
-    $('#formulario_atenciones #search_exame_fisico_start').on('click', function(event) {
-        $('#formulario_atenciones #search_exame_fisico_start').hide();
-        $('#formulario_atenciones #search_exame_fisico_stop').show();
-        recognition.start();
-
-        recognition.onresult = function(event) {
-            finalResult = '';
-            var valor_anterior = $('#formulario_atenciones #exame_fisico').val();
-            for (var i = event.resultIndex; i < event.results.length; ++i) {
-                if (event.results[i].isFinal) {
-                    finalResult = event.results[i][0].transcript;
-                    if (valor_anterior != "") {
-                        $('#formulario_atenciones #exame_fisico').val(valor_anterior + ' ' +
-                            finalResult);
-                        caracteresExamenFisico();
-                    } else {
-                        $('#formulario_atenciones #exame_fisico').val(finalResult);
-                        caracteresExamenFisico();
-                    }
-                }
-            }
-        };
-        return false;
-    });
-
-    $('#formulario_atenciones #search_diagnostico_start').on('click', function(event) {
-        $('#formulario_atenciones #search_diagnostico_start').hide();
-        $('#formulario_atenciones #search_diagnostico_stop').show();
-        recognition.start();
-
-        recognition.onresult = function(event) {
-            finalResult = '';
-            var valor_anterior = $('#formulario_atenciones #diagnostico').val();
-            for (var i = event.resultIndex; i < event.results.length; ++i) {
-                if (event.results[i].isFinal) {
-                    finalResult = event.results[i][0].transcript;
-                    if (valor_anterior != "") {
-                        $('#formulario_atenciones #diagnostico').val(valor_anterior + ' ' +
-                            finalResult);
-                        caracteresDiagnostico();
-                    } else {
-                        $('#formulario_atenciones #diagnostico').val(finalResult);
-                        caracteresDiagnostico();
-                    }
-                }
-            }
-        };
-        return false;
-    });
-
-    $('#formulario_atenciones #search_seguimiento_start').on('click', function(event) {
-        $('#formulario_atenciones #search_seguimiento_start').hide();
-        $('#formulario_atenciones #search_seguimiento_stop').show();
-        recognition.start();
-
-        recognition.onresult = function(event) {
-            finalResult = '';
-            var valor_anterior = $('#formulario_atenciones #seguimiento').val();
-            for (var i = event.resultIndex; i < event.results.length; ++i) {
-                if (event.results[i].isFinal) {
-                    finalResult = event.results[i][0].transcript;
-                    if (valor_anterior != "") {
-                        $('#formulario_atenciones #seguimiento').val(valor_anterior + ' ' +
-                            finalResult);
-                        caracteresSeguimiento();
-                    } else {
-                        $('#formulario_atenciones #seguimiento').val(finalResult);
-                        caracteresSeguimiento();
-                    }
-                }
-            }
-        };
-        return false;
-    });
-
-    $('#formulario_atenciones #search_antecedentes_stop').on("click", function(event) {
-        $('#formulario_atenciones #search_antecedentes_start').show();
-        $('#formulario_atenciones #search_antecedentes_stop').hide();
-        recognition.stop();
-    });
-
-    $('#formulario_atenciones #search_historia_clinica_stop').on("click", function(event) {
-        $('#formulario_atenciones #search_historia_clinica_start').show();
-        $('#formulario_atenciones #search_historia_clinica_stop').hide();
-        recognition.stop();
-    });
-
-    $('#formulario_atenciones #search_exame_fisico_stop').on("click", function(event) {
-        $('#formulario_atenciones #search_exame_fisico_start').show();
-        $('#formulario_atenciones #search_exame_fisico_stop').hide();
-        recognition.stop();
-    });
-
-    $('#formulario_atenciones #search_diagnostico_stop').on("click", function(event) {
-        $('#formulario_atenciones #search_diagnostico_start').show();
-        $('#formulario_atenciones #search_diagnostico_stop').hide();
-        recognition.stop();
-    });
-
-    $('#formulario_atenciones #search_seguimiento_stop').on("click", function(event) {
-        $('#formulario_atenciones #search_seguimiento_start').show();
-        $('#formulario_atenciones #search_seguimiento_stop').hide();
-        recognition.stop();
-    });
-});
 
 $(document).ready(function() {
     $('#formulario_atenciones #fecha_nac').on('change', function() {

@@ -9,7 +9,7 @@ $pacientes_id = $_POST['pacientes_id'];
 $agenda_id = $_POST['agenda_id'];
 
 //CONSULTAR LOS DATOS DEL PACIENTE
-$sql = "SELECT p.identidad AS 'identidad', p.fecha_nacimiento 'fecha_nacimiento', CONCAT(p.nombre, ' ', p.apellido) AS 'paciente', p.localidad AS 'localidad', p.religion_id AS 'religion', p.profesion_id AS 'profesion', CAST(a.fecha_cita AS DATE) AS 'fecha', a.servicio_id AS 'servicio_id', p.estado_civil AS 'estado_civil'
+$sql = "SELECT p.identidad AS 'identidad', p.fecha_nacimiento 'fecha_nacimiento', CONCAT(p.nombre, ' ', p.apellido) AS 'paciente', p.localidad AS 'localidad', p.religion_id AS 'religion', p.profesion_id AS 'profesion', CAST(a.fecha_cita AS DATE) AS 'fecha', a.servicio_id AS 'servicio_id', p.estado_civil AS 'estado_civil', p.escolaridad, p.red_apoyo, p.terapeuta_actual
    FROM agenda AS a
    INNER JOIN pacientes AS p
    ON a.pacientes_id = p.pacientes_id
@@ -28,6 +28,9 @@ $palabra_anos = "";
 $palabra_mes = "";
 $palabra_dia = "";
 $estado_civil = "";
+$escolaridad = "";
+$red_apoyo = "";
+$terapeuta_actual = "";
 
 //OBTENEMOS LOS VALORES DEL REGISTRO
 if($result->num_rows>0){
@@ -42,6 +45,9 @@ if($result->num_rows>0){
 	$fecha_cita = $consulta_registro['fecha'];	
 	$servicio_id = $consulta_registro['servicio_id'];
 	$estado_civil = $consulta_registro['estado_civil'];	
+	$escolaridad = $consulta_registro['escolaridad'];	
+	$red_apoyo = $consulta_registro['red_apoyo'];
+	$terapeuta_actual = $consulta_registro['terapeuta_actual'];	
 	
 	//CONSULTA AÑO, MES y DIA DEL PACIENTE
 	$valores_array = getEdad($fecha_nacimiento);
@@ -70,25 +76,49 @@ if($result->num_rows>0){
 }
 
 //OBTENER HISTORIA CLINICA
-$query_historia = "SELECT pacientes_id, antecedentes, historia_clinica, examen_fisico, diagnostico, num_hijos
+$query_historia = "SELECT pacientes_id, antecedentes_medicos_no_psiquiatricos, hospitalizaciones, cirugias, alergias, antecedentes_medicos_psiquiatricos, historia_gineco_obstetrica, medicamentos_previos, medicamentos_actuales, legal, sustancias, rasgos_personalidad, informacion_adicional, pendientes, diagnostico, seguimiento, num_hijos
 	FROM atenciones_medicas
 	WHERE pacientes_id = '$pacientes_id'
 	ORDER BY atencion_id DESC limit 1";
 $result_historia = $mysqli->query($query_historia) or die($mysqli->error);
 	
-$antecedentes = "";
-$historia_clinica = "";
-$examen_fisico = "";
+$antecedentes_medicos_no_psiquiatricos = "";
+$hospitalizaciones = "";
+$cirugias = "";
+$alergias = "";
+$antecedentes_medicos_psiquiatricos = "";
+$historia_gineco_obstetrica = "";
+$medicamentos_previos = "";
+$medicamentos_actuales = "";
+$legal = "";
+$sustancias = "";
+$rasgos_personalidad = "";
+$informacion_adicional = "";
+$pendientes = "";
 $diagnostico = "";
+$seguimiento = "";
+
 $num_hijos = 0;
 
 if($result_historia->num_rows>0){
 	$consulta_historia = $result_historia->fetch_assoc();
 	
-	$antecedentes = $consulta_historia['antecedentes'];
-	$historia_clinica = $consulta_historia['historia_clinica'];
-	$examen_fisico = $consulta_historia['examen_fisico'];
+	$antecedentes_medicos_no_psiquiatricos = $consulta_historia['antecedentes_medicos_no_psiquiatricos'];
+	$hospitalizaciones = $consulta_historia['hospitalizaciones'];
+	$cirugias = $consulta_historia['cirugias'];
+	$alergias = $consulta_historia['alergias'];
+	$antecedentes_medicos_psiquiatricos = $consulta_historia['antecedentes_medicos_psiquiatricos'];
+	$historia_gineco_obstetrica = $consulta_historia['historia_gineco_obstetrica'];
+	$medicamentos_previos = $consulta_historia['medicamentos_previos'];
+	$medicamentos_actuales = $consulta_historia['medicamentos_actuales'];
+	$legal = $consulta_historia['legal'];
+	$sustancias = $consulta_historia['sustancias'];
+	$rasgos_personalidad = $consulta_historia['rasgos_personalidad'];
+	$informacion_adicional = $consulta_historia['informacion_adicional'];
+	$pendientes = $consulta_historia['pendientes'];
 	$diagnostico = $consulta_historia['diagnostico'];
+	$seguimiento = $consulta_historia['seguimiento'];
+
 	$num_hijos = $consulta_historia['num_hijos'];	
 }
 
@@ -117,14 +147,28 @@ $datos = array(
      6 => $pacientes_id,
      7 => $fecha_cita,
      8 => $fecha_nacimiento,
-     9 => $antecedentes,
-     10 => $historia_clinica,
-     11 => $examen_fisico,	 
-     12 => $diagnostico,	 	 
+     9 => $antecedentes_medicos_no_psiquiatricos,
+     10 => $hospitalizaciones,
+     11 => $cirugias,	 
+     12 => $alergias,	 	 
 	 13 => $seguimiento_consulta,
 	 14 => $servicio_id,	 
 	 15 => $estado_civil,
 	 16 => $num_hijos,
+	 17 => $escolaridad,
+	 18 => $red_apoyo,
+	 19 => $terapeuta_actual,
+	 20 => $antecedentes_medicos_psiquiatricos,
+	 21 => $historia_gineco_obstetrica,
+     22 => $medicamentos_previos,
+	 23 => $medicamentos_actuales,
+	 24 => $legal,
+	 25 => $sustancias,
+	 26 =>$rasgos_personalidad,
+	 27 => $informacion_adicional,
+     28 => $pendientes,
+	 29 => $diagnostico,
+     30 => $seguimiento
 );	
 	
 echo json_encode($datos);

@@ -2,126 +2,147 @@
 session_start();   
 include "../funtions.php";
 
-//CONEXION A DB
+// CONEXIÓN A DB
 $mysqli = connect_mysqli(); 
 
 $colaborador_id = $_SESSION['colaborador_id'];
 $paginaActual = $_POST['partida'];
-
-$paginaActual = $_POST['partida'];
 $desde = $_POST['desde'];
 $hasta = $_POST['hasta'];
-$dato = $_POST['dato'];	
+$dato = $_POST['dato'];    
 $colaborador = $_POST['colaborador'];
 
-$colaborador_where = "";
-$dato_where = "";
+$where = "WHERE am.fecha BETWEEN '$desde' AND '$hasta'";
 
-if($colaborador != ""){
-	$where = "WHERE am.fecha BETWEEN '$desde' AND '$hasta' AND f.colaborador_id = '$profesional' AND f.estado = '$estado'";
-}else if($dato != ""){
-	$where = "WHERE CONCAT(p.nombre,' ',p.apellido) LIKE '%$dato%' OR p.apellido LIKE '$dato%' OR p.identidad LIKE '$dato%'";
-}else{
-	$where = "WHERE am.fecha BETWEEN '$desde' AND '$hasta'";
+if ($colaborador != "") {
+    $where .= " AND am.colaborador_id = '$colaborador_id'";
+} elseif ($dato != "") {
+    $where .= " AND (CONCAT(p.nombre, ' ', p.apellido) LIKE '%$dato%' OR p.apellido LIKE '%$dato%' OR p.identidad LIKE '%$dato%')";
 }
 
-$query = "SELECT am.atencion_id AS 'atencion_id',  DATE_FORMAT(am.fecha, '%d/%m/%Y') AS 'fecha', CONCAT(p.nombre,' ',p.apellido) AS 'paciente', p.identidad AS 'identidad', am.historia_clinica AS 'historia_clinica',CONCAT(c.nombre,' ',c.apellido) AS 'colaborador', s.nombre AS 'servicio', (CASE WHEN p.genero = 'H' THEN 'Hombre' ELSE 'Mujer' END) AS 'sexo',
-(CASE WHEN am.paciente = 'N' THEN 'N' ELSE 'S' END) AS 'paciente_tipo'
-	FROM atenciones_medicas AS am
-	INNER JOIN pacientes AS p
-	ON am.pacientes_id = p.pacientes_id
-	INNER JOIN colaboradores AS c
-	ON am.colaborador_id = c.colaborador_id
-	INNER JOIN servicios AS s
-	ON am.servicio_id = s.servicio_id
-	".$where."
-    ORDER BY am.fecha DESC";	
-$result = $mysqli->query($query);
-$nroProductos = $result->num_rows;
-  
+// Consulta para contar el total de registros
+$countQuery = "SELECT COUNT(*) AS total
+               FROM atenciones_medicas AS am
+               INNER JOIN pacientes AS p ON am.pacientes_id = p.pacientes_id
+               $where";
+$result = $mysqli->query($countQuery);
+$totalRows = $result->fetch_assoc()['total'];
+
 $nroLotes = 15;
-$nroPaginas = ceil($nroProductos/$nroLotes);
-$lista = '';
-$tabla = '';
+$nroPaginas = ceil($totalRows / $nroLotes);
+$limit = ($paginaActual - 1) * $nroLotes;
 
-if($paginaActual > 1){
-	$lista = $lista.'<li class="page-item"><a class="page-link" href="javascript:pagination('.(1).');">Inicio</a></li>';
+// Consultar los registros para la página actual
+$query = "SELECT am.atencion_id AS 'atencion_id', 
+                 DATE_FORMAT(am.fecha, '%d/%m/%Y') AS 'fecha', 
+                 CONCAT(p.nombre, ' ', p.apellido) AS 'paciente', 
+                 p.identidad AS 'identidad', 
+                 am.antecedentes_medicos_no_psiquiatricos AS 'antecedentes_medicos_no_psiquiatricos',
+                 am.hospitaliaciones AS 'hospitaliaciones',
+                 am.cirugias AS 'cirugias',
+                 am.alergias AS 'alergias',
+                 am.antecedentes_medicos_psiquiatricos AS 'antecedentes_medicos_psiquiatricos',
+                 am.historia_gineco_obstetrica AS 'historia_gineco_obstetrica',
+                 am.medicamentos_previos AS 'medicamentos_previos',
+                 am.medicamentos_actuales AS 'medicamentos_actuales',
+                 am.legal AS 'legal',
+                 am.sustancias AS 'sustancias',
+                 am.rasgos_personalidad AS 'rasgos_personalidad',
+                 am.informacion_adicional AS 'informacion_adicional',
+                 am.pendientes AS 'pendientes',
+                 am.diagnostico AS 'diagnostico',
+                 am.seguimiento AS 'seguimiento',
+                 (CASE WHEN p.genero = 'H' THEN 'Hombre' ELSE 'Mujer' END) AS 'sexo',
+                 (CASE WHEN am.paciente = 'N' THEN 'Nuevo' ELSE 'Subsiguiente' END) AS 'paciente_tipo'
+          FROM atenciones_medicas AS am
+          INNER JOIN pacientes AS p ON am.pacientes_id = p.pacientes_id
+          $where
+          ORDER BY am.fecha DESC
+          LIMIT $limit, $nroLotes";
+
+$result = $mysqli->query($query);
+
+$tabla = '<table class="table table-striped table-condensed table-hover">
+            <tr>
+            <th width="6.5%">Fecha</th>
+            <th width="15%">Paciente</th>
+            <th width="10%">Identidad</th>
+            <th width="8%">Sexo</th>
+            <th width="10%">Tipo Paciente</th>
+            <th width="15%">Antecedentes Médicos No Psiquiátricos</th>
+            <th width="15%">Hospitalizaciones</th>
+            <th width="15%">Cirugías</th>
+            <th width="15%">Alergias</th>
+            <th width="15%">Antecedentes Médicos Psiquiátricos</th>
+            <th width="15%">Historia Gineco-Obstétrica</th>
+            <th width="15%">Medicamentos Previos</th>
+            <th width="15%">Medicamentos Actuales</th>
+            <th width="15%">Legal</th>
+            <th width="15%">Sustancias</th>
+            <th width="15%">Rasgos de Personalidad</th>
+            <th width="15%">Información Adicional</th>
+            <th width="15%">Pendientes</th>
+            <th width="15%">Diagnóstico</th>
+            <th width="15%">Seguimiento</th>
+            </tr>';
+
+while ($registro2 = $result->fetch_assoc()) {
+    $tabla .= '<tr>
+       <td>' . $registro2['fecha'] . '</td>
+       <td>' . $registro2['paciente'] . '</td>           
+       <td>' . $registro2['identidad'] . '</td>    
+       <td>' . $registro2['sexo'] . '</td>    
+       <td>' . $registro2['paciente_tipo'] . '</td>           
+       <td>' . $registro2['antecedentes_medicos_no_psiquiatricos'] . '</td>
+       <td>' . $registro2['hospitaliaciones'] . '</td>
+       <td>' . $registro2['cirugias'] . '</td>
+       <td>' . $registro2['alergias'] . '</td>
+       <td>' . $registro2['antecedentes_medicos_psiquiatricos'] . '</td>
+       <td>' . $registro2['historia_gineco_obstetrica'] . '</td>
+       <td>' . $registro2['medicamentos_previos'] . '</td>
+       <td>' . $registro2['medicamentos_actuales'] . '</td>
+       <td>' . $registro2['legal'] . '</td>
+       <td>' . $registro2['sustancias'] . '</td>
+       <td>' . $registro2['rasgos_personalidad'] . '</td>
+       <td>' . $registro2['informacion_adicional'] . '</td>
+       <td>' . $registro2['pendientes'] . '</td>
+       <td>' . $registro2['diagnostico'] . '</td>
+       <td>' . $registro2['seguimiento'] . '</td>
+    </tr>';
 }
 
-if($paginaActual > 1){
-	$lista = $lista.'<li class="page-item"><a class="page-link" href="javascript:pagination('.($paginaActual-1).');">Anterior '.($paginaActual-1).'</a></li>';
-}
-
-if($paginaActual < $nroPaginas){
-	$lista = $lista.'<li class="page-item"><a class="page-link" href="javascript:pagination('.($paginaActual+1).');">Siguiente '.($paginaActual+1).' de '.$nroPaginas.'</a></li>';
-}
-
-if($paginaActual > 1){
-	$lista = $lista.'<li class="page-item"><a class="page-link" href="javascript:pagination('.($nroPaginas).');">Ultima</a></li>';
-}	
-
-if($paginaActual <= 1){
-	$limit = 0;
-}else{
-	$limit = $nroLotes*($paginaActual-1);
-}
-
-$registro = "SELECT am.atencion_id AS 'atencion_id', DATE_FORMAT(am.fecha, '%d/%m/%Y') AS 'fecha', CONCAT(p.nombre,' ',p.apellido) AS 'paciente', p.identidad AS 'identidad', am.historia_clinica AS 'historia_clinica',CONCAT(c.nombre,' ',c.apellido) AS 'colaborador', s.nombre AS 'servicio', (CASE WHEN p.genero = 'H' THEN 'Hombre' ELSE 'Mujer' END) AS 'sexo',
-(CASE WHEN am.paciente = 'N' THEN 'N' ELSE 'S' END) AS 'paciente_tipo'
-	FROM atenciones_medicas AS am
-	INNER JOIN pacientes AS p
-	ON am.pacientes_id = p.pacientes_id
-	INNER JOIN colaboradores AS c
-	ON am.colaborador_id = c.colaborador_id
-	INNER JOIN servicios AS s
-	ON am.servicio_id = s.servicio_id
-	".$where."
-    ORDER BY am.fecha DESC
-	LIMIT $limit, $nroLotes";
-$result = $mysqli->query($registro);
-
-$tabla = $tabla.'<table class="table table-striped table-condensed table-hover">
-			<tr>
-			<th width="6.5%">Fecha</th>
-			<th width="25.5%">Nombre</th>
-			<th width="10.5%">Identidad</th>
-			<th width="4.5%">Sexo</th>
-			<th width="4.5%">Paciente</th>
-			<th width="27.5%">Historia Clínica</th>
-			<th width="10.5%">Colaborador</th>
-			<th width="10.5%">Servicio</th>				
-			</tr>';			
-			
-while($registro2 = $result->fetch_assoc()){	
-	$tabla = $tabla.'<tr>
-	   <td>'.$registro2['fecha'].'</td>
-	   <td>'.$registro2['paciente'].'</td>		   
-	   <td>'.$registro2['identidad'].'</td>	
-       <td>'.$registro2['sexo'].'</td>	
-       <td>'.$registro2['paciente_tipo'].'</td>		   
-	   <td>'.$registro2['historia_clinica'].'</td>
-	   <td>'.$registro2['colaborador'].'</td>		   
-	   <td>'.$registro2['servicio'].'</td>		   
-	</tr>';	        
-}
-
-if($nroProductos == 0){
-	$tabla = $tabla.'<tr>
-	   <td colspan="17" style="color:#C7030D">No se encontraron resultados</td>
-	</tr>';		
-}else{
-   $tabla = $tabla.'<tr>
-	  <td colspan="17"><b><p ALIGN="center">Total de Registros Encontrados '.$nroProductos.'</p></b>
-   </tr>';		
+if ($totalRows == 0) {
+    $tabla .= '<tr>
+       <td colspan="20" style="color:#C7030D">No se encontraron resultados</td>
+    </tr>';        
+} else {
+    $tabla .= '<tr>
+      <td colspan="20"><b><p ALIGN="center">Total de Registros Encontrados ' . $totalRows . '</p></b>
+   </tr>';        
 }        
 
-$tabla = $tabla.'</table>';
+$tabla .= '</table>';
+
+// Generar la paginación
+$lista = '';
+
+if ($paginaActual > 1) {
+    $lista .= '<li class="page-item"><a class="page-link" href="javascript:pagination(1);">Inicio</a></li>';
+}
+
+if ($paginaActual > 1) {
+    $lista .= '<li class="page-item"><a class="page-link" href="javascript:pagination(' . ($paginaActual - 1) . ');">Anterior ' . ($paginaActual - 1) . '</a></li>';
+}
+
+if ($paginaActual < $nroPaginas) {
+    $lista .= '<li class="page-item"><a class="page-link" href="javascript:pagination(' . ($paginaActual + 1) . ');">Siguiente ' . ($paginaActual + 1) . ' de ' . $nroPaginas . '</a></li>';
+}
+
+if ($paginaActual > 1) {
+    $lista .= '<li class="page-item"><a class="page-link" href="javascript:pagination(' . ($nroPaginas) . ');">Última</a></li>';
+}
 
 $array = array(0 => $tabla,
-			   1 => $lista);
+               1 => $lista);
 
 echo json_encode($array);
-
-$result->free();//LIMPIAR RESULTADO
-$mysqli->close();//CERRAR CONEXIÓN	
-?>

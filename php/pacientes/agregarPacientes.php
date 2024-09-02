@@ -13,7 +13,6 @@ $telefono2 = $_POST['telefono2'];
 $fecha_nacimiento = $_POST['fecha_nac'];
 $correo = strtolower(cleanString($_POST['correo']));
 $fecha = date("Y-m-d");
-$numero_hijos = 0;
 
 if(isset($_POST['departamento_id'])){//COMPRUEBO SI LA VARIABLE ESTA DIFINIDA
 	if($_POST['departamento_id'] == ""){
@@ -105,9 +104,9 @@ if($result->num_rows==0){
 	$expediente = correlativo('expediente ', 'pacientes');
 	
 	$insert = "INSERT INTO pacientes 
-    (pacientes_id, expediente, identidad, nombre, apellido, genero, telefono1, telefono2, fecha_nacimiento, email, fecha, pais_id, departamento_id, municipio_id, localidad, religion_id, profesion_id, estado_civil, responsable, responsable_id, usuario, estado, fecha_registro, referido_id, numero_hijos) 
+    (pacientes_id, expediente, identidad, nombre, apellido, genero, telefono1, telefono2, fecha_nacimiento, email, fecha, pais_id, departamento_id, municipio_id, localidad, religion_id, profesion_id, estado_civil, responsable, responsable_id, usuario, estado, fecha_registro, referido_id) 
     VALUES 
-    ('$pacientes_id', '$expediente', '$identidad', '$nombre', '$apellido', '$sexo', '$telefono1', '$telefono2', '$fecha_nacimiento', '$correo', '$fecha', '$pais_id', '$departamento_id', '$municipio_id', '$localidad', '$religion_id', '$profesion_id', '$estado_civil', '$responsable', '$responsable_id', '$usuario', '$estado', '$fecha_registro', '$referido_id', '$numero_hijos')";
+    ('$pacientes_id', '$expediente', '$identidad', '$nombre', '$apellido', '$sexo', '$telefono1', '$telefono2', '$fecha_nacimiento', '$correo', '$fecha', '$pais_id', '$departamento_id', '$municipio_id', '$localidad', '$religion_id', '$profesion_id', '$estado_civil', '$responsable', '$responsable_id', '$usuario', '$estado', '$fecha_registro', '$referido_id')";
 
 	$query = $mysqli->query($insert);
 	

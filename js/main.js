@@ -443,7 +443,6 @@ function llenarTabla(dato) {
 	}
 
 	if (dato == "FacturaAtenciones") {
-		getServicio();
 		listar_productos_facturas_buscar();
 		pagination(1);
 		limpiarTabla();

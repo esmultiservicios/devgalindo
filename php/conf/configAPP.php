@@ -4,7 +4,7 @@
     */
 
     //DATOS DE CONEXION DEL CLIENTE
-    const SERVERURL = "http://localhost/devcami/";
+    const SERVERURL = "http://localhost/devgalindo/";
 	const SERVEREMPRESA = "CAMI";
 	const SERVER = "localhost";
     const DB = "clinicarehn_clientes_cami";
