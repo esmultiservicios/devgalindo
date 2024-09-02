@@ -298,6 +298,8 @@ function editarRegistro(pacientes_id, agenda_id) {
                     $('#formulario_atenciones #num_hijos').val(array[16]);
 
                     $('#formulario_atenciones #escolaridad').val(array[17]);
+                    $('#formulario_atenciones #escolaridad').selectpicker('refresh');
+
                     $('#formulario_atenciones #red_apoyo').val(array[18]);
                     $('#formulario_atenciones #terapeuta_actual').val(array[19]);
 
@@ -316,7 +318,6 @@ function editarRegistro(pacientes_id, agenda_id) {
                     $('#formulario_atenciones #informacion_adicional').val(array[27]);
                     $('#formulario_atenciones #pendientes').val(array[28]);
                     $('#formulario_atenciones #diagnostico').val(array[29]);
-                    $('#formulario_atenciones #seguimiento').val(array[30]);
 
                     $("#formulario_atenciones #fecha").attr('readonly', true);
                     $("#edi_atencion").attr('disabled', false);
@@ -638,6 +639,8 @@ $(document).ready(function(e) {
                     $('#formulario_atenciones #num_hijos').val(array[26]);
 
                     $('#formulario_atenciones #escolaridad').val(array[27]);
+                    $('#formulario_atenciones #escolaridad').selectpicker('refresh');
+
                     $('#formulario_atenciones #red_apoyo').val(array[28]);
                     $('#formulario_atenciones #terapeuta_actual').val(array[29]);
 
@@ -1340,6 +1343,7 @@ function funcionesFormPacientes() {
     getProfesion();
     getReligion();
     getEstadoCivl();
+    getEscolaridad()
     getConsultorio();
     pagination(1);
 }
@@ -1527,6 +1531,21 @@ function getEstadoCivl() {
     });
 }
 //FIN FUNCION PARA OBTENER EL ESTADO CIVIL
+
+function getEscolaridad() {
+    var url = '<?php echo SERVERURL; ?>php/atencion_pacientes/getEscolaridad.php';
+
+    $.ajax({
+        type: "POST",
+        url: url,
+        async: true,
+        success: function(data) {
+            $('#formulario_atenciones #escolaridad').html("");
+            $('#formulario_atenciones #escolaridad').html(data);
+            $('#formulario_atenciones #escolaridad').selectpicker('refresh');
+        }
+    });
+}
 
 //INICIO FUNCION PARA OBTENER LA PROFESION
 function getProfesion() {

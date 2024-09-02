@@ -19,8 +19,19 @@ $fecha = $_POST['fecha'];
 $servicio_id = $_POST['servicio_id'];
 
 $num_hijos = $_POST['num_hijos'];
+
 $localidad = cleanStringStrtolower($_POST['procedencia']);
-$escolaridad = cleanStringStrtolower($_POST['escolaridad']);
+
+if(isset($_POST['escolaridad'])){//COMPRUEBO SI LA VARIABLE ESTA DIFINIDA
+	if($_POST['escolaridad'] == ""){
+		$escolaridad = 0;
+	}else{
+		$escolaridad = $_POST['escolaridad'];
+	}
+}else{
+	$escolaridad = 0;
+}
+
 $red_apoyo = cleanStringStrtolower($_POST['red_apoyo']);
 $terapeuta_actual = cleanStringStrtolower($_POST['terapeuta_actual']);
 

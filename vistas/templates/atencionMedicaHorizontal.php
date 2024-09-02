@@ -109,8 +109,11 @@
                 <div class="form-row">
                     <div class="col-md-3 mb-3">
                         <label for="escolaridad">Escolaridad</label>
-                        <input type="text" name="escolaridad" id="escolaridad" placeholder="Escolaridad"
-                            class="form-control" maxlength="100" />
+                        <div class="input-group mb-3">
+                            <select class="selectpicker" id="escolaridad" name="escolaridad" data-live-search="true"
+                                title="Escolaridad" data-width="100%" data-size="7">
+                            </select>
+                        </div>
                     </div>
                     <div class="col-md-3 mb-3">
                         <label for="red_apoyo">Red de Apoyo</label>
