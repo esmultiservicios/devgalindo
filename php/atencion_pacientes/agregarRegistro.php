@@ -1,37 +1,40 @@
 <?php
-session_start();   
-include "../funtions.php";
-	
-//CONEXION A DB
-$mysqli = connect_mysqli(); 
+session_start();
+include '../funtions.php';
 
+// CONEXION A DB
+$mysqli = connect_mysqli();
 
 $agenda_id = $_POST['agenda_id'];
 $pacientes_id = $_POST['pacientes_id'];
 $fecha = $_POST['fecha'];
 $localidad = cleanStringStrtolower($_POST['procedencia']);
 
-if(isset($_POST['escolaridad'])){//COMPRUEBO SI LA VARIABLE ESTA DIFINIDA
-	if($_POST['escolaridad'] == ""){
+if (isset($_POST['escolaridad'])) {  // COMPRUEBO SI LA VARIABLE ESTA DIFINIDA
+	if ($_POST['escolaridad'] == '') {
 		$escolaridad = 0;
-	}else{
+	} else {
 		$escolaridad = $_POST['escolaridad'];
 	}
-}else{
+} else {
 	$escolaridad = 0;
 }
 
 $red_apoyo = cleanStringStrtolower($_POST['red_apoyo']);
 $terapeuta_actual = cleanStringStrtolower($_POST['terapeuta_actual']);
 
+$identidad = $_POST['identidad'];
+$fecha_nac = $_POST['fecha_nac'];
+$telefono1 = $_POST['telefono1'];
+
 $num_hijos = $_POST['num_hijos'];
 $colaborador_id = $_SESSION['colaborador_id'];
-$hora = date("H:i", strtotime('00:00'));
-$fecha_cita =  date("Y-m-d H:i:s", strtotime($fecha));
-$fecha_cita_end =  date("Y-m-d H:i:s", strtotime($fecha));
-$fecha_registro = date("Y-m-d H:i:s");
-$status = 1;//ESTADO PARA LA AGENDA DEL PACIENTE
-$estado = 1;//ESTADO DE LA ATENCION DEL PACIENTE PARA LA FACTURACION 1. PENDIENTE 2. PAGADA
+$hora = date('H:i', strtotime('00:00'));
+$fecha_cita = date('Y-m-d H:i:s', strtotime($fecha));
+$fecha_cita_end = date('Y-m-d H:i:s', strtotime($fecha));
+$fecha_registro = date('Y-m-d H:i:s');
+$status = 1;  // ESTADO PARA LA AGENDA DEL PACIENTE
+$estado = 1;  // ESTADO DE LA ATENCION DEL PACIENTE PARA LA FACTURACION 1. PENDIENTE 2. PAGADA
 
 $antecedentes_medicos_no_psiquiatricos = cleanStringStrtolower($_POST['antecedentes_medicos_no_psiquiatricos']);
 $hospitalizaciones = cleanStringStrtolower($_POST['hospitalizaciones']);
@@ -49,50 +52,50 @@ $pendientes = cleanStringStrtolower($_POST['pendientes']);
 $diagnostico = cleanStringStrtolower($_POST['diagnostico']);
 $seguimiento = cleanStringStrtolower($_POST['seguimiento']);
 
-if(isset($_POST['religion_id'])){//COMPRUEBO SI LA VARIABLE ESTA DIFINIDA
-	if($_POST['religion_id'] == ""){
+if (isset($_POST['religion_id'])) {  // COMPRUEBO SI LA VARIABLE ESTA DIFINIDA
+	if ($_POST['religion_id'] == '') {
 		$religion_id = 0;
-	}else{
+	} else {
 		$religion_id = $_POST['religion_id'];
 	}
-}else{
+} else {
 	$religion_id = 0;
 }
 
-if(isset($_POST['profesion_id'])){//COMPRUEBO SI LA VARIABLE ESTA DIFINIDA
-	if($_POST['profesion_id'] == ""){
+if (isset($_POST['profesion_id'])) {  // COMPRUEBO SI LA VARIABLE ESTA DIFINIDA
+	if ($_POST['profesion_id'] == '') {
 		$profesion_id = 0;
-	}else{
+	} else {
 		$profesion_id = $_POST['profesion_id'];
 	}
-}else{
+} else {
 	$profesion_id = 0;
 }
 
-if(isset($_POST['estado_civil'])){//COMPRUEBO SI LA VARIABLE ESTA DIFINIDA
-	if($_POST['estado_civil'] == ""){
+if (isset($_POST['estado_civil'])) {  // COMPRUEBO SI LA VARIABLE ESTA DIFINIDA
+	if ($_POST['estado_civil'] == '') {
 		$estado_civil = 0;
-	}else{
+	} else {
 		$estado_civil = $_POST['estado_civil'];
 	}
-}else{
+} else {
 	$estado_civil = 0;
 }
-//CONSULTAR SERVICIO_ID
+// CONSULTAR SERVICIO_ID
 $query_servicio = "SELECT servicio_id
 	FROM agenda
 	WHERE pacientes_id = '$pacientes_id' AND CAST(fecha_cita AS DATE) = '$fecha' AND status = 0";
 $result_servicio = $mysqli->query($query_servicio) or die($mysqli->error);
-$consultar_servicio = $result_servicio->fetch_assoc(); 
+$consultar_servicio = $result_servicio->fetch_assoc();
 
-$servicio_id = "";
+$servicio_id = '';
 
-if($result_servicio->num_rows>=0){
+if ($result_servicio->num_rows >= 0) {
 	$servicio_id = $consultar_servicio['servicio_id'];
 }
 
-/*##############################################################################################################################################################################################*/
-//ACTUALIZAMOS LOS DATOS DEL PACIENTE
+/* ############################################################################################################################################################################################## */
+// ACTUALIZAMOS LOS DATOS DEL PACIENTE
 $update = "UPDATE pacientes 
 	SET 
 		estado_civil = '$estado_civil',
@@ -101,27 +104,30 @@ $update = "UPDATE pacientes
 		localidad = '$localidad',
 		escolaridad = '$escolaridad',
 		red_apoyo = '$red_apoyo',
-		terapeuta_actual = '$terapeuta_actual'
+		terapeuta_actual = '$terapeuta_actual',
+		telefono1 = '$telefono1',
+		identidad = '$identidad',
+		fecha_nacimiento = '$fecha_nac'
 	WHERE pacientes_id = '$pacientes_id'";
 $mysqli->query($update) or die($mysqli->error);
-/*##############################################################################################################################################################################################*/
+/* ############################################################################################################################################################################################## */
 $query_fecha_nac = "SELECT fecha_nacimiento
 	FROM pacientes
 	WHERE pacientes_id = '$pacientes_id'";
 $result_fecha_nacimiento = $mysqli->query($query_fecha_nac);
- 
-$fecha_nacimiento = date("Y-m-d");
-	
-if($result_fecha_nacimiento->num_rows>0){
+
+$fecha_nacimiento = date('Y-m-d');
+
+if ($result_fecha_nacimiento->num_rows > 0) {
 	$consulta_expediente1 = $result_fecha_nacimiento->fetch_assoc();
 	$fecha_nacimiento = $consulta_expediente1['fecha_nacimiento'];
-}	
-			
-//CONSULTA AÑO, MES y DIA DEL PACIENTE
+}
+
+// CONSULTA AÑO, MES y DIA DEL PACIENTE
 $valores_array = getEdad($fecha_nacimiento);
 $anos = $valores_array['anos'];
-$meses = $valores_array['meses'];	  
-$dias = $valores_array['dias'];	
+$meses = $valores_array['meses'];
+$dias = $valores_array['dias'];
 /*********************************************************************************/
 
 $consultar_tipo_paciente = "SELECT atencion_id 
@@ -133,13 +139,13 @@ $result_tipo_paciente = $mysqli->query($consultar_tipo_paciente) or die($mysqli-
 
 $tipo_paciente = '';
 
-if($result_tipo_paciente->num_rows==0){
+if ($result_tipo_paciente->num_rows == 0) {
 	$tipo_paciente = 'N';
-}else{
+} else {
 	$tipo_paciente = 'S';
 }
 
-//CONSULTA DATOS DEL PACIENTE
+// CONSULTA DATOS DEL PACIENTE
 $query = "SELECT CONCAT(nombre, ' ', apellido) AS 'paciente', identidad, expediente AS 'expediente'
 	FROM pacientes
 	WHERE pacientes_id = '$pacientes_id'";
@@ -150,24 +156,24 @@ $paciente = 0;
 $identidad = 0;
 $expediente = 0;
 
-if($result->num_rows>0){
+if ($result->num_rows > 0) {
 	$paciente = $consulta_registro['paciente'];
 	$identidad = $consulta_registro['identidad'];
 	$expediente = $consulta_registro['expediente'];
-}	
+}
 
-//CONSULTAMOS SI EXITE LA ATENCION
+// CONSULTAMOS SI EXITE LA ATENCION
 $query = "SELECT atencion_id 
    FROM atenciones_medicas
    WHERE pacientes_id = '$pacientes_id' AND fecha = '$fecha' AND servicio_id = '$servicio_id'";
-$result_existencia = $mysqli->query($query) or die($mysqli->error);   
+$result_existencia = $mysqli->query($query) or die($mysqli->error);
 
-//OBTENER CORRELATIVO
+// OBTENER CORRELATIVO
 $atencion_id = correlativo('atencion_id', 'atenciones_medicas');
 
-if($pacientes_id != 0){
-	if($servicio_id != 0){
-		if($result_existencia->num_rows < 3){		
+if ($pacientes_id != 0) {
+	if ($servicio_id != 0) {
+		if ($result_existencia->num_rows < 3) {
 			$insert = "INSERT INTO atenciones_medicas (
 				atencion_id,
 				pacientes_id,
@@ -221,79 +227,79 @@ if($pacientes_id != 0){
 				'$estado',
 				'$fecha_registro'
 				)";
-				
-			$query = $mysqli->query($insert) or die($mysqli->error);				  
 
-			if($query){
+			$query = $mysqli->query($insert) or die($mysqli->error);
+
+			if ($query) {
 				$datos = array(
-					0 => "Almacenado", 
-					1 => "Registro Almacenado Correctamente", 
-					2 => "success",
-					3 => "btn-primary",
-					4 => "formulario_atenciones",
-					5 => "Registro",
-					6 => "AtencionMedica",//FUNCION DE LA TABLA QUE LLAMAREMOS PARA QUE ACTUALICE (DATATABLE BOOSTRAP)
-					7 => "modal_registro_atenciones", //Modals Para Cierre Automatico
+					0 => 'Almacenado',
+					1 => 'Registro Almacenado Correctamente',
+					2 => 'success',
+					3 => 'btn-primary',
+					4 => 'formulario_atenciones',
+					5 => 'Registro',
+					6 => 'AtencionMedica',  // FUNCION DE LA TABLA QUE LLAMAREMOS PARA QUE ACTUALICE (DATATABLE BOOSTRAP)
+					7 => 'modal_registro_atenciones',  // Modals Para Cierre Automatico
 					8 => $atencion_id,
-					9 => "Guardar",
+					9 => 'Guardar',
 				);
-				
-				//ACTUALIZAMOS EL ESTADO DE LA AGENDA
+
+				// ACTUALIZAMOS EL ESTADO DE LA AGENDA
 				$update = "UPDATE agenda SET status = '$status'
-					WHERE agenda_id = '$agenda_id'";	
+					WHERE agenda_id = '$agenda_id'";
 				$mysqli->query($update) or die($mysqli->error);
-				
-				//INGRESAR REGISTROS EN LA ENTIDAD HISTORIAL
+
+				// INGRESAR REGISTROS EN LA ENTIDAD HISTORIAL
 				$historial_numero = historial();
-				$estado_historial = "Agregar";
+				$estado_historial = 'Agregar';
 				$observacion_historial = "Se ha agregado una nueva atención para este paciente: $paciente con identidad n° $identidad";
-				$modulo = "Atención Pacientes";
+				$modulo = 'Atención Pacientes';
 				$insert = "INSERT INTO historial 
-					VALUES('$historial_numero','$pacientes_id','$expediente','$modulo','$atencion_id','$colaborador_id','$servicio_id','$fecha','$estado_historial','$observacion_historial','$colaborador_id','$fecha_registro')";	
-				
+					VALUES('$historial_numero','$pacientes_id','$expediente','$modulo','$atencion_id','$colaborador_id','$servicio_id','$fecha','$estado_historial','$observacion_historial','$colaborador_id','$fecha_registro')";
+
 				$mysqli->query($insert) or die($mysqli->error);
 				/********************************************/
-			}else{
+			} else {
 				$datos = array(
-					0 => "Error", 
-					1 => "No se puedo almacenar este registro, los datos son incorrectos por favor corregir", 
-					2 => "error",
-					3 => "btn-danger",
-					4 => "",
-					5 => "",			
+					0 => 'Error',
+					1 => 'No se puedo almacenar este registro, los datos son incorrectos por favor corregir',
+					2 => 'error',
+					3 => 'btn-danger',
+					4 => '',
+					5 => '',
 				);
 			}
-		}else{
+		} else {
 			$datos = array(
-				0 => "Error", 
-				1 => "Lo sentimos este registro ya existe no se puede almacenar", 
-				2 => "error",
-				3 => "btn-danger",
-				4 => "",
-				5 => "",		
+				0 => 'Error',
+				1 => 'Lo sentimos este registro ya existe no se puede almacenar',
+				2 => 'error',
+				3 => 'btn-danger',
+				4 => '',
+				5 => '',
 			);
 		}
-	}else{
+	} else {
 		$datos = array(
-			0 => "Error", 
-			1 => "Lo sentimos, debe seleccionar un consultorio antes de continuar, por favor corregir", 
-			2 => "error",
-			3 => "btn-danger",
-			4 => "",
-			5 => "",			
+			0 => 'Error',
+			1 => 'Lo sentimos, debe seleccionar un consultorio antes de continuar, por favor corregir',
+			2 => 'error',
+			3 => 'btn-danger',
+			4 => '',
+			5 => '',
 		);
-	}		
-}else{
+	}
+} else {
 	$datos = array(
-		0 => "Error", 
-		1 => "Lo sentimos, debe seleccionar un paciente antes de continuar, por favor corregir", 
-		2 => "error",
-		3 => "btn-danger",
-		4 => "",
-		5 => "",			
-	);	
+		0 => 'Error',
+		1 => 'Lo sentimos, debe seleccionar un paciente antes de continuar, por favor corregir',
+		2 => 'error',
+		3 => 'btn-danger',
+		4 => '',
+		5 => '',
+	);
 }
 
 echo json_encode($datos);
 
-$mysqli->close();//CERRAR CONEXIÓN
+$mysqli->close();  // CERRAR CONEXIÓN

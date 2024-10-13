@@ -27,7 +27,7 @@
                         <div class="col-md-12 mb-3">
                             <label>Fecha <span class="priority">*<span /></label>
                             <input type="date" required id="fechaCierreCaja" name="fechaCierreCaja"
-                                value="<?php echo date ("Y-m-d");?>" class="form-control" />
+                                value="<?php echo date('Y-m-d'); ?>" class="form-control" />
                         </div>
                     </div>
                 </form>
@@ -354,7 +354,7 @@
                         <div class="col-md-4 mb-3">
                             <label for="edad">Fecha <span class="priority">*<span /></label>
                             <input type="date" required readonly id="fecha" name="fecha"
-                                value="<?php echo date ("Y-m-d");?>" class="form-control" />
+                                value="<?php echo date('Y-m-d'); ?>" class="form-control" />
                         </div>
                         <div class="col-md-4 mb-3">
                             <label for="edad">Identidad </label>
@@ -1172,7 +1172,7 @@
                                                 <div class="form-card">
                                                     <h3 class="mt-0 mb-4 text-center">Ingrese detalles del Pago</h3>
                                                     <form class="FormularioAjax" id="formEfectivoBill"
-                                                        action="<?php echo SERVERURL;?>php/facturacion/addPagoEfectivo.php"
+                                                        action="<?php echo SERVERURL; ?>php/facturacion/addPagoEfectivo.php"
                                                         method="POST" data-form="save" autocomplete="off"
                                                         enctype="multipart/form-data">
                                                         <div class="row">
@@ -1219,7 +1219,7 @@
                                                     </h3>
                                                     <form class="FormularioAjax" id="formTarjetaBill" method="POST"
                                                         data-form="save"
-                                                        action="<?php echo SERVERURL;?>php/facturacion/addPagoTarjeta.php"
+                                                        action="<?php echo SERVERURL; ?>php/facturacion/addPagoTarjeta.php"
                                                         autocomplete="off" enctype="multipart/form-data">
                                                         <div class="row">
                                                             <div class="col-12">
@@ -1270,7 +1270,7 @@
                                                 <div class="form-card">
                                                     <h6 class="mt-0 mb-4 text-center">Ingrese Pago Mixto</h6>
                                                     <form class="FormularioAjax" id="formMixtoBill"
-                                                        action="<?php echo SERVERURL;?>php/facturacion/addPagoMixto.php"
+                                                        action="<?php echo SERVERURL; ?>php/facturacion/addPagoMixto.php"
                                                         method="POST" data-form="save" autocomplete="off"
                                                         enctype="multipart/form-data">
                                                         <div class="row">
@@ -1347,7 +1347,7 @@
                                                         Transferencia</h3>
                                                     <form class="FormularioAjax" id="formTransferenciaBill"
                                                         method="POST" data-form="save"
-                                                        action="<?php echo SERVERURL;?>php/facturacion/addPagoTransferencia.php"
+                                                        action="<?php echo SERVERURL; ?>php/facturacion/addPagoTransferencia.php"
                                                         autocomplete="off" enctype="multipart/form-data">
                                                         <div class="row">
                                                             <div class="col-12">
@@ -1405,7 +1405,7 @@
                                                     <h3 class="mt-0 mb-4 text-center">Ingrese detalles del Cheque</h3>
                                                     <form class="FormularioAjax" id="formChequeBill" method="POST"
                                                         data-form="save"
-                                                        action="<?php echo SERVERURL;?>php/facturacion/addPagoCheque.php"
+                                                        action="<?php echo SERVERURL; ?>php/facturacion/addPagoCheque.php"
                                                         autocomplete="off" enctype="multipart/form-data">
                                                         <div class="row">
                                                             <div class="col-12">

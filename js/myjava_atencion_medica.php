@@ -272,6 +272,8 @@ function editarRegistro(pacientes_id, agenda_id) {
                     $('#formulario_atenciones #identidad').val(array[0]);
                     $('#formulario_atenciones #nombre').val(array[1]);
 
+                    $('#formulario_atenciones #telefono1').val(array[31]);
+
                     // Imprime el valor de edad en consola para verificar
                     $('#formulario_atenciones #edad').val(array[2]);
 
@@ -610,6 +612,8 @@ $(document).ready(function(e) {
                     $('#formulario_atenciones #religion_id').val(array[4]);
                     $('#formulario_atenciones #religion_id').selectpicker('refresh');
 
+                    $('#formulario_atenciones #telefono1').val(array[30]);
+
                     $('#formulario_atenciones #profesion_id').val(array[5]);
                     $('#formulario_atenciones #profesion_id').selectpicker('refresh');
 
@@ -857,8 +861,8 @@ function pagination(partida) {
             estado,
         success: function(data) {
             var array = eval(data);
-            $('#agrega-registros').html(array[0]);
-            $('#pagination').html(array[1]);
+            $('#agrega-registros-atenciones').html(array[0]);
+            $('#pagination-atenciones').html(array[1]);
         }
     });
     return false;

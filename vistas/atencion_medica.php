@@ -1,29 +1,29 @@
 <?php
-session_start(); 
-include "../php/funtions.php";
+session_start();
+include '../php/funtions.php';
 
-if( isset($_SESSION['colaborador_id']) == false ){
-   header('Location: login.php'); 
-}    
+if (isset($_SESSION['colaborador_id']) == false) {
+    header('Location: login.php');
+}
 
-$_SESSION['menu'] = "Atenciones Medicas";
+$_SESSION['menu'] = 'Atenciones Medicas';
 
-if(isset($_SESSION['colaborador_id'])){
- $colaborador_id = $_SESSION['colaborador_id'];  
-}else{
-   $colaborador_id = "";
+if (isset($_SESSION['colaborador_id'])) {
+    $colaborador_id = $_SESSION['colaborador_id'];
+} else {
+    $colaborador_id = '';
 }
 
 $type = $_SESSION['type'];
 
-$nombre_host = gethostbyaddr($_SERVER['REMOTE_ADDR']);//HOSTNAME	
-$fecha = date("Y-m-d H:i:s"); 
-$comentario = mb_convert_case("Ingreso al Modulo de Atenciones Medicas", MB_CASE_TITLE, "UTF-8");   
+$nombre_host = gethostbyaddr($_SERVER['REMOTE_ADDR']);  // HOSTNAME
+$fecha = date('Y-m-d H:i:s');
+$comentario = mb_convert_case('Ingreso al Modulo de Atenciones Medicas', MB_CASE_TITLE, 'UTF-8');
 
-if($colaborador_id != "" || $colaborador_id != null){
-   historial_acceso($comentario, $nombre_host, $colaborador_id);  
-} 
- ?>
+if ($colaborador_id != '' || $colaborador_id != null) {
+    historial_acceso($comentario, $nombre_host, $colaborador_id);
+}
+?>
 
 <!DOCTYPE html>
 <html lang="es">
@@ -35,14 +35,14 @@ if($colaborador_id != "" || $colaborador_id != null){
     <meta http-equiv="Content-type" content="text/html; charset=utf-8" />
     <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Atenciones Medicas :: <?php echo SERVEREMPRESA;?></title>
-    <?php include("script_css.php"); ?>
+    <title>Atenciones Medicas :: <?php echo SERVEREMPRESA; ?></title>
+    <?php include ('script_css.php'); ?>
 </head>
 
 <body>
     <!--Ventanas Modales-->
     <!-- Small modal -->
-    <?php include("templates/modals.php"); ?>
+    <?php include ('templates/modals.php'); ?>
 
     <!--MODAL BUSCAR ATENCIONES-->
     <div class="modal fade" id="buscar_atencion">
@@ -148,7 +148,7 @@ if($colaborador_id != "" || $colaborador_id != null){
                             </div>
                             <div class="col-md-6 mb-3">
                                 <label for="fecha">Fecha <span class="priority">*<span /></label>
-                                <input type="date" required id="fecha" name="fecha" value="<?php echo date ("Y-m-d");?>"
+                                <input type="date" required id="fecha" name="fecha" value="<?php echo date('Y-m-d'); ?>"
                                     class="form-control" />
                             </div>
                         </div>
@@ -229,7 +229,7 @@ if($colaborador_id != "" || $colaborador_id != null){
                             </div>
                             <div class="col-md-6 mb-3">
                                 <label for="fecha">Fecha <span class="priority">*<span /></label>
-                                <input type="date" required id="fecha" name="fecha" value="<?php echo date ("Y-m-d");?>"
+                                <input type="date" required id="fecha" name="fecha" value="<?php echo date('Y-m-d'); ?>"
                                     class="form-control" />
                             </div>
                         </div>
@@ -269,11 +269,11 @@ if($colaborador_id != "" || $colaborador_id != null){
             </div>
         </div>
     </div>
-    <?php include("modals/modals.php");?>
+    <?php include ('modals/modals.php'); ?>
 
     <!--Fin Ventanas Modales-->
     <!--MENU-->
-    <?php include("templates/menu.php"); ?>
+    <?php include ('templates/menu.php'); ?>
     <!--FIN MENU-->
 
     <br><br><br>
@@ -301,7 +301,7 @@ if($colaborador_id != "" || $colaborador_id != null){
                             </span>
                         </div>
                         <input type="date" required="required" id="fecha_b" name="fecha_b" style="width:160px;"
-                            value="<?php echo date ("Y-m-d");?>" class="form-control" />
+                            value="<?php echo date('Y-m-d'); ?>" class="form-control" />
                     </div>
                 </div>
                 <div class="form-group mr-1">
@@ -312,7 +312,7 @@ if($colaborador_id != "" || $colaborador_id != null){
                             </span>
                         </div>
                         <input type="date" required="required" id="fecha_f" name="fecha_f" style="width:160px;"
-                            value="<?php echo date ("Y-m-d");?>" class="form-control" />
+                            value="<?php echo date('Y-m-d'); ?>" class="form-control" />
                     </div>
                 </div>
                 <div class="form-group mr-1">
@@ -327,6 +327,15 @@ if($colaborador_id != "" || $colaborador_id != null){
                             Atención
                         </button>
                 </div>
+
+                <div class="form-group mr-1">
+                    <button class="btn btn-primary ml-1" type="submit" id="nuevo-registro">
+                        <div class="sb-nav-link-icon" data-toggle="tooltip" data-placement="top"
+                            title="Registrar Pacientes"></div><i class="fas fa-user-plus fa-lg"></i> Registrar
+                        Pacientes
+                    </button>
+                </div>
+
                 <div class="form-group mr-1">
                     <button class="btn btn-primary ml-1" type="submit" id="nueva_factura">
                         <div class="sb-nav-link-icon"></div><i class="fas fa-file-invoice fa-lg"></i> Pre Factura
@@ -351,30 +360,31 @@ if($colaborador_id != "" || $colaborador_id != null){
             <hr />
             <div class="form-group">
                 <div class="col-sm-12">
-                    <div class="registros overflow-auto" id="agrega-registros"></div>
+                    <div class="registros overflow-auto" id="agrega-registros-atenciones"></div>
                 </div>
             </div>
             <nav aria-label="Page navigation example">
-                <ul class="pagination justify-content-center" id="pagination"></ul>
+                <ul class="pagination justify-content-center" id="pagination-atenciones"></ul>
             </nav>
         </div>
-        <?php include("templates/atencionMedicaVertical.php"); ?>
-        <?php include("templates/factura.php"); ?>
-        <?php include("templates/footer.php"); ?>
-        <?php include("templates/footer_facturas.php"); ?>
+        <?php include ('templates/atencionMedicaVertical.php'); ?>
+        <?php include ('templates/factura.php'); ?>
+        <?php include ('templates/footer.php'); ?>
+        <?php include ('templates/footer_facturas.php'); ?>
     </div>
 
     <!-- add javascripts -->
-    <?php 
-		include "script.php"; 
-		
-		include "../js/main.php"; 
-		include "../js/invoice.php"; 	
-		include "../js/myjava_atencion_medica.php";		
-		include "../js/select.php"; 	
-		include "../js/functions.php"; 
-		include "../js/myjava_cambiar_pass.php"; 		
-	?>
+    <?php
+        include 'script.php';
+
+        include '../js/main.php';
+        include '../js/invoice.php';
+        include '../js/myjava_pacientes.php';
+        include '../js/myjava_atencion_medica.php';
+        include '../js/select.php';
+        include '../js/functions.php';
+        include '../js/myjava_cambiar_pass.php';
+    ?>
 
 </body>
 

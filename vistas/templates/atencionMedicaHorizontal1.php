@@ -78,26 +78,24 @@
 
                 <div class="form-row">
                     <div class="col-md-3 mb-3">
-                        <label>Fecha de Nacimiento <span class="priority">*<span /></label>
-                        <div class="input-group mb-3">
-                            <input type="date" id="fecha_nac" name="fecha_nac" value="<?php echo date('Y-m-d'); ?>"
-                                class="form-control" />
-                        </div>
-                    </div>
-                    <div class="col-md-3 mb-3">
-                        <label for="telefono">Teléfono 1 <span class="priority">*<span /></label>
-                        <div class="input-group mb-3">
-                            <input type="number" id="telefono1" name="telefono1" class="form-control"
-                                placeholder="Primer Teléfono" required maxlength="8"
-                                oninput="if(this.value.length > this.maxLength) this.value = this.value.slice(0, this.maxLength);" />
-                        </div>
-                    </div>
-                    <div class="col-md-3 mb-3">
                         <label for="identidad">Identidad o RTN</label>
                         <div class="input-group mb-3">
                             <input type="text" class="form-control" id="identidad" name="identidad"
                                 placeholder="Identidad o RTN">
                         </div>
+                    </div>
+
+                    <div class="col-md-3 mb-3">
+                        <label>Fecha de Nacimiento <span class="priority">*</span></label>
+                        <input type="date" id="fecha_nac" name="fecha_nac" value="<?php echo date('Y-m-d'); ?>"
+                            class="form-control" />
+                    </div>
+
+                    <div class="col-md-3 mb-3">
+                        <label for="telefono">Teléfono 1 <span class="priority">*</span></label>
+                        <input type="number" id="telefono1" name="telefono1" class="form-control" placeholder="Teléfono"
+                            required maxlength="8"
+                            oninput="if(this.value.length > this.maxLength) this.value = this.value.slice(0, this.maxLength);" />
                     </div>
                 </div>
 

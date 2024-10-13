@@ -1,4 +1,6 @@
 <script>
+const SERVERURL = '<?php echo SERVERURL; ?>';
+
 $(document).ready(function() {
     getGithubVersion();
 });

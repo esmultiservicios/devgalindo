@@ -1,51 +1,51 @@
 <?php
 session_start();
-include "../php/funtions.php";
+include '../php/funtions.php';
 
-//CONEXION A DB
+// CONEXION A DB
 $mysqli = connect_mysqli();
 
-if( isset($_SESSION['colaborador_id']) == false ){
-   header('Location: login.php');
+if (isset($_SESSION['colaborador_id']) == false) {
+    header('Location: login.php');
 }
 
-$_SESSION['menu'] = "Configuraciones Varios";
+$_SESSION['menu'] = 'Configuraciones Varios';
 
-if(isset($_SESSION['colaborador_id'])){
- $colaborador_id = $_SESSION['colaborador_id'];
-}else{
-   $colaborador_id = "";
+if (isset($_SESSION['colaborador_id'])) {
+    $colaborador_id = $_SESSION['colaborador_id'];
+} else {
+    $colaborador_id = '';
 }
 
 $type = $_SESSION['type'];
 
-$nombre_host = gethostbyaddr($_SERVER['REMOTE_ADDR']);//HOSTNAME
-$fecha = date("Y-m-d H:i:s");
-$comentario = mb_convert_case("Ingreso al Modulo de Configuraciones Varios", MB_CASE_TITLE, "UTF-8");
+$nombre_host = gethostbyaddr($_SERVER['REMOTE_ADDR']);  // HOSTNAME
+$fecha = date('Y-m-d H:i:s');
+$comentario = mb_convert_case('Ingreso al Modulo de Configuraciones Varios', MB_CASE_TITLE, 'UTF-8');
 
-if($colaborador_id != "" || $colaborador_id != null){
-   historial_acceso($comentario, $nombre_host, $colaborador_id);
+if ($colaborador_id != '' || $colaborador_id != null) {
+    historial_acceso($comentario, $nombre_host, $colaborador_id);
 }
 
-//OBTENER NOMBRE DE EMPRESA
+// OBTENER NOMBRE DE EMPRESA
 $usuario = $_SESSION['colaborador_id'];
 
 $query_empresa = "SELECT e.nombre AS 'nombre'
-	FROM users AS u
-	INNER JOIN empresa AS e
-	ON u.empresa_id = e.empresa_id
-	WHERE u.colaborador_id = '$usuario'";
+\tFROM users AS u
+\tINNER JOIN empresa AS e
+\tON u.empresa_id = e.empresa_id
+\tWHERE u.colaborador_id = '$usuario'";
 $result = $mysqli->query($query_empresa) or die($mysqli->error);
 $consulta_registro = $result->fetch_assoc();
 
 $empresa = '';
 
-if($result->num_rows>0){
-  $empresa = $consulta_registro['nombre'];
+if ($result->num_rows > 0) {
+    $empresa = $consulta_registro['nombre'];
 }
 
-$mysqli->close();//CERRAR CONEXIÓN
- ?>
+$mysqli->close();  // CERRAR CONEXIÓN
+?>
 
 <!DOCTYPE html>
 <html lang="es">
@@ -58,13 +58,13 @@ $mysqli->close();//CERRAR CONEXIÓN
     <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Configuraciones Varios :: <?php echo $empresa; ?></title>
-    <?php include("script_css.php"); ?>
+    <?php include ('script_css.php'); ?>
 </head>
 
 <body>
     <!--Ventanas Modales-->
     <!-- Small modal -->
-    <?php include("templates/modals.php"); ?>
+    <?php include ('templates/modals.php'); ?>
 
     <div class="modal fade" id="registrar">
         <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
@@ -93,10 +93,12 @@ $mysqli->close();//CERRAR CONEXIÓN
                         </div>
                         <div class="form-row">
                             <div class="col-md-6 mb-3">
-                                <label for="expedoente">Registro</label>
-                                <select id="consulta_registro" name="consulta_registro" class="form-control"
-                                    data-toggle="tooltip" data-placement="top" title="Registro" data-size="5">
-                                </select>
+                                <label for="consulta_registro">Registro</label>
+                                <div class="input-group mb-3">
+                                    <select class="selectpicker" id="consulta_registro" name="consulta_registro"
+                                        data-live-search="true" title="Registro" data-width="100%" data-size="5">
+                                    </select>
+                                </div>
                             </div>
                             <div class="col-md-6 mb-3">
                                 <label for="edad">Nombre</label>
@@ -104,6 +106,8 @@ $mysqli->close();//CERRAR CONEXIÓN
                                     class="form-control" />
                             </div>
                         </div>
+                        <br />
+                        <br />
                         <br />
                         <br />
                     </form>
@@ -120,12 +124,12 @@ $mysqli->close();//CERRAR CONEXIÓN
         </div>
     </div>
     <!--INICIO MODAL-->
-    <?php include("modals/modals.php");?>
+    <?php include ('modals/modals.php'); ?>
     <!--FIN MODAL-->
 
     <!--Fin Ventanas Modales-->
     <!--MENU-->
-    <?php include("templates/menu.php"); ?>
+    <?php include ('templates/menu.php'); ?>
     <!--FIN MENU-->
 
     <br><br><br>
@@ -193,19 +197,19 @@ $mysqli->close();//CERRAR CONEXIÓN
 
             </div>
         </div>
-        <?php include("templates/footer.php"); ?>
+        <?php include ('templates/footer.php'); ?>
     </div>
 
     <!-- add javascripts -->
     <?php
-		include "script.php";
+        include 'script.php';
 
-		include "../js/main.php";
-		include "../js/myjava_config_varios.php";
-		include "../js/select.php";
-		include "../js/functions.php";
-		include "../js/myjava_cambiar_pass.php";
-	?>
+        include '../js/main.php';
+        include '../js/myjava_config_varios.php';
+        include '../js/select.php';
+        include '../js/functions.php';
+        include '../js/myjava_cambiar_pass.php';
+    ?>
 
 </body>
 

@@ -1,25 +1,25 @@
 <?php
 echo "
   <optgroup label='Facturación'>
-	  <option value='banco'>Banco</option> 				   
-	  <option value='tipo_pago'>Tipo Pago</option> 
-	  <option value='atenciones'>Atenciones</option> 
-	  <option value='isv'>Impuesto Sobre la Venta (ISV)</option> 	  
+\t  <option value='banco'>Banco</option> \t\t\t\t   
+\t  <option value='tipo_pago'>Tipo Pago</option> 
+\t  <option value='atenciones'>Atenciones</option> 
+\t  <option value='isv'>Impuesto Sobre la Venta (ISV)</option> \t  
   </optgroup> 
   <optgroup label='Acceso al Sistema'>
-	  <option value='tipo_user'>Tipo Usuario</option>
+\t  <option value='tipo_user'>Tipo Usuario</option>
   </optgroup>
   <optgroup label='Pacientes'>
-	  <option value='pais'>Pais</option>
-	  <option value='raza'>Raza</option>
-	  <option value='religion'>Religion</option>
-	  <option value='escolaridad'>Escolaridad</option>
+\t  <option value='pais'>Pais</option>
+\t  <option value='raza'>Raza</option>
+\t  <option value='religion'>Religion</option>
+\t  <option value='escolaridad'>Escolaridad</option>
   </optgroup>     
   <optgroup label='Colaboradores'>
-	  <option value='jornada'>Jornada</option>
+\t  <option value='jornada'>Jornada</option>
   </optgroup> 
   <optgroup label='Otros'>
-	  <option value='tipo_muestra'>Tipo de Muestra</option>
+\t  <option value='tipo_muestra'>Tipo de Muestra</option>
+\t  <option value='referido'>Referido</option>
   </optgroup>   
 ";
-?>
