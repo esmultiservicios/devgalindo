@@ -9,7 +9,7 @@ $pacientes_id = $_POST['pacientes_id'];
 $agenda_id = $_POST['agenda_id'];
 
 // CONSULTAR LOS DATOS DEL PACIENTE
-$sql = "SELECT p.identidad AS 'identidad', p.fecha_nacimiento 'fecha_nacimiento', CONCAT(p.nombre, ' ', p.apellido) AS 'paciente', p.localidad AS 'localidad', p.religion_id AS 'religion', p.profesion_id AS 'profesion', CAST(a.fecha_cita AS DATE) AS 'fecha', a.servicio_id AS 'servicio_id', p.estado_civil AS 'estado_civil', p.escolaridad, p.red_apoyo, p.terapeuta_actual, p.telefono1 AS 'telefono'
+$sql = "SELECT p.identidad AS 'identidad', p.fecha_nacimiento 'fecha_nacimiento', CONCAT(p.nombre, ' ', p.apellido) AS 'paciente', p.localidad AS 'localidad', p.religion_texto AS 'religion', p.profesion_texto AS 'profesion', CAST(a.fecha_cita AS DATE) AS 'fecha', a.servicio_id AS 'servicio_id', p.estado_civil_texto AS 'estado_civil', p.escolaridad_texto AS 'escolaridad', p.red_apoyo, p.terapeuta_actual, p.telefono1 AS 'telefono'
    FROM agenda AS a
    INNER JOIN pacientes AS p
    ON a.pacientes_id = p.pacientes_id
@@ -127,7 +127,9 @@ if ($result_historia->num_rows > 0) {
 // OBTENER SEGUIMIENTO
 $query_seguimiento = "SELECT fecha, seguimiento
 	FROM atenciones_medicas
-	WHERE pacientes_id = '$pacientes_id'";
+	WHERE pacientes_id = '$pacientes_id'
+	ORDER BY fecha DESC";  // Ordenar por fecha de manera descendente
+
 $result_seguimiento = $mysqli->query($query_seguimiento) or die($mysqli->error);
 
 $seguimiento_consulta = '';

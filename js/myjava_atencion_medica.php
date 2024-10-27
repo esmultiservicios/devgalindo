@@ -279,10 +279,8 @@ function editarRegistro(pacientes_id, agenda_id) {
 
                     $('#formulario_atenciones #procedencia').val(array[3]);
                     $('#formulario_atenciones #religion_id').val(array[4]);
-                    $('#formulario_atenciones #religion_id').selectpicker('refresh');
 
-                    $('#formulario_atenciones #profesion_id').val(array[5]);
-                    $('#formulario_atenciones #profesion_id').selectpicker('refresh');
+                    $('#formulario_atenciones #profesion').val(array[5]);
 
                     $('#formulario_atenciones #paciente_consulta').val(array[6]);
                     $('#formulario_atenciones #paciente_consulta').selectpicker('refresh');
@@ -295,7 +293,6 @@ function editarRegistro(pacientes_id, agenda_id) {
                     $('#formulario_atenciones #servicio_id').selectpicker('refresh');
 
                     $('#formulario_atenciones #estado_civil').val(array[15]);
-                    $('#formulario_atenciones #estado_civil').selectpicker('refresh');
 
                     $('#formulario_atenciones #num_hijos').val(array[16]);
 
@@ -610,15 +607,13 @@ $(document).ready(function(e) {
                     $('#formulario_atenciones #edad').val(array[2]);
                     $('#formulario_atenciones #procedencia').val(array[3]);
                     $('#formulario_atenciones #religion_id').val(array[4]);
-                    $('#formulario_atenciones #religion_id').selectpicker('refresh');
 
                     $('#formulario_atenciones #telefono1').val(array[30]);
 
-                    $('#formulario_atenciones #profesion_id').val(array[5]);
-                    $('#formulario_atenciones #profesion_id').selectpicker('refresh');
+                    $('#formulario_atenciones #profesion').val(array[5]);
+
 
                     $('#formulario_atenciones #estado_civil').val(array[13]);
-                    $('#formulario_atenciones #estado_civil').selectpicker('refresh');
 
                     $('#formulario_atenciones #paciente_consulta').val(array[6]);
 
@@ -1344,10 +1339,6 @@ function funcionesFormPacientes() {
     getServicioAtencion();
     getEstado();
     getPacientes();
-    getProfesion();
-    getReligion();
-    getEstadoCivl();
-    getEscolaridad()
     getConsultorio();
     pagination(1);
 }
@@ -1502,40 +1493,6 @@ function getPacientes() {
 }
 //FIN FUNCION PARA OBTENER LOS PACIENTES
 
-//INICIO FUNCION PARA OBTENER LA RELIGION
-function getReligion() {
-    var url = '<?php echo SERVERURL; ?>php/atencion_pacientes/getReligion.php';
-
-    $.ajax({
-        type: "POST",
-        url: url,
-        async: true,
-        success: function(data) {
-            $('#formulario_atenciones #religion_id').html("");
-            $('#formulario_atenciones #religion_id').html(data);
-            $('#formulario_atenciones #religion_id').selectpicker('refresh');
-        }
-    });
-}
-//FIN FUNCION PARA OBTENER LOS PACIENTES
-
-//INICIO FUNCION PARA OBTENER EL ESTADO CIVIL
-function getEstadoCivl() {
-    var url = '<?php echo SERVERURL; ?>php/atencion_pacientes/getEstadoCivil.php';
-
-    $.ajax({
-        type: "POST",
-        url: url,
-        async: true,
-        success: function(data) {
-            $('#formulario_atenciones #estado_civil').html("");
-            $('#formulario_atenciones #estado_civil').html(data);
-            $('#formulario_atenciones #estado_civil').selectpicker('refresh');
-        }
-    });
-}
-//FIN FUNCION PARA OBTENER EL ESTADO CIVIL
-
 function getEscolaridad() {
     var url = '<?php echo SERVERURL; ?>php/atencion_pacientes/getEscolaridad.php';
 
@@ -1551,22 +1508,6 @@ function getEscolaridad() {
     });
 }
 
-//INICIO FUNCION PARA OBTENER LA PROFESION
-function getProfesion() {
-    var url = '<?php echo SERVERURL; ?>php/atencion_pacientes/getProfesion.php';
-
-    $.ajax({
-        type: "POST",
-        url: url,
-        async: true,
-        success: function(data) {
-            $('#formulario_atenciones #profesion_id').html("");
-            $('#formulario_atenciones #profesion_id').html(data);
-            $('#formulario_atenciones #profesion_id').selectpicker('refresh');
-        }
-    });
-}
-//FIN FUNCION PARA OBTENER LOS PACIENTES
 
 //INICIO PARA OBTENER EL SERVICIO DEL FORMULARIO DE PACIENTES
 function getServicioAtencion(agenda_id) {

@@ -8,8 +8,8 @@ $mysqli = connect_mysqli();
 $pacientes_id = $_POST['pacientes_id'];
 
 // CONSULTAR LOS DATOS DEL PACIENTE
-$sql = "SELECT identidad AS 'identidad', fecha_nacimiento 'fecha_nacimiento', CONCAT(nombre, ' ', apellido) AS 'paciente', profesion_id AS 'profesion', 
-   localidad AS 'localidad', religion_id AS 'religion', estado_civil, escolaridad, red_apoyo, terapeuta_actual, telefono1 AS 'telefono'
+$sql = "SELECT identidad AS 'identidad', fecha_nacimiento 'fecha_nacimiento', CONCAT(nombre, ' ', apellido) AS 'paciente', profesion_texto AS 'profesion', 
+   localidad AS 'localidad', religion_texto AS 'religion', estado_civil_texto As 'estado_civil', escolaridad_texto AS 'escolaridad', red_apoyo, terapeuta_actual, telefono1 AS 'telefono'
    FROM pacientes
    WHERE pacientes_id = '$pacientes_id'";
 
@@ -100,7 +100,9 @@ if ($result_historia->num_rows > 0) {
 // OBTENER SEGUIMIENTO
 $query_seguimiento = "SELECT fecha, seguimiento
 	FROM atenciones_medicas
-	WHERE pacientes_id = '$pacientes_id'";
+	WHERE pacientes_id = '$pacientes_id'
+	ORDER BY fecha DESC";  // Ordenar por fecha de manera descendente
+
 $result_seguimiento = $mysqli->query($query_seguimiento) or die($mysqli->error);
 
 $seguimiento_consulta = '';

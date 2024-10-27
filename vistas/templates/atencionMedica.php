@@ -11,7 +11,7 @@
                 <div class="sb-nav-link-icon"></div><i class="fas fa-plus fa-lg"></i> Nuevo Registro
             </button>
             <button class="btn btn-primary mx-2" type="submit" id="edi_atencion" form="formulario_atenciones">
-                <div class="sb-nav-link-icon"></div><i class="far fa-save fa-lg"></i> Editar
+                <div class="sb-nav-link-icon"></div><i class="far fa-save fa-lg"></i> Registrar
             </button>
         </div>
 

@@ -10,16 +10,6 @@ $pacientes_id = $_POST['pacientes_id'];
 $fecha = $_POST['fecha'];
 $localidad = cleanStringStrtolower($_POST['procedencia']);
 
-if (isset($_POST['escolaridad'])) {  // COMPRUEBO SI LA VARIABLE ESTA DIFINIDA
-	if ($_POST['escolaridad'] == '') {
-		$escolaridad = 0;
-	} else {
-		$escolaridad = $_POST['escolaridad'];
-	}
-} else {
-	$escolaridad = 0;
-}
-
 $red_apoyo = cleanStringStrtolower($_POST['red_apoyo']);
 $terapeuta_actual = cleanStringStrtolower($_POST['terapeuta_actual']);
 
@@ -52,35 +42,11 @@ $pendientes = cleanStringStrtolower($_POST['pendientes']);
 $diagnostico = cleanStringStrtolower($_POST['diagnostico']);
 $seguimiento = cleanStringStrtolower($_POST['seguimiento']);
 
-if (isset($_POST['religion_id'])) {  // COMPRUEBO SI LA VARIABLE ESTA DIFINIDA
-	if ($_POST['religion_id'] == '') {
-		$religion_id = 0;
-	} else {
-		$religion_id = $_POST['religion_id'];
-	}
-} else {
-	$religion_id = 0;
-}
+$religion = cleanStringStrtolower($_POST['religion_id']);
+$profesion = cleanStringStrtolower($_POST['profesion']);
+$estado_civil = cleanStringStrtolower($_POST['estado_civil']);
+$escolaridad = cleanStringStrtolower($_POST['escolaridad']);
 
-if (isset($_POST['profesion_id'])) {  // COMPRUEBO SI LA VARIABLE ESTA DIFINIDA
-	if ($_POST['profesion_id'] == '') {
-		$profesion_id = 0;
-	} else {
-		$profesion_id = $_POST['profesion_id'];
-	}
-} else {
-	$profesion_id = 0;
-}
-
-if (isset($_POST['estado_civil'])) {  // COMPRUEBO SI LA VARIABLE ESTA DIFINIDA
-	if ($_POST['estado_civil'] == '') {
-		$estado_civil = 0;
-	} else {
-		$estado_civil = $_POST['estado_civil'];
-	}
-} else {
-	$estado_civil = 0;
-}
 // CONSULTAR SERVICIO_ID
 $query_servicio = "SELECT servicio_id
 	FROM agenda
@@ -98,11 +64,11 @@ if ($result_servicio->num_rows >= 0) {
 // ACTUALIZAMOS LOS DATOS DEL PACIENTE
 $update = "UPDATE pacientes 
 	SET 
-		estado_civil = '$estado_civil',
-		religion_id = '$religion_id', 
-		profesion_id = '$profesion_id',
+		estado_civil_texto = '$estado_civil',
+		religion_texto = '$religion', 
+		profesion_texto = '$profesion',
 		localidad = '$localidad',
-		escolaridad = '$escolaridad',
+		escolaridad_texto = '$escolaridad',
 		red_apoyo = '$red_apoyo',
 		terapeuta_actual = '$terapeuta_actual',
 		telefono1 = '$telefono1',

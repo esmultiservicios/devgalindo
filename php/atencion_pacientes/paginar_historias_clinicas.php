@@ -89,4 +89,3 @@ echo json_encode($array);
 
 $result->free();  // LIMPIAR RESULTADO
 $mysqli->close();  // CERRAR CONEXIÓN
-?>
