@@ -367,7 +367,7 @@ if ($colaborador_id != '' || $colaborador_id != null) {
                 <ul class="pagination justify-content-center" id="pagination-atenciones"></ul>
             </nav>
         </div>
-        <?php include ('templates/atencionMedicaVertical.php'); ?>
+        <?php include ('templates/atencionMedica.php'); ?>
         <?php include ('templates/factura.php'); ?>
         <?php include ('templates/footer.php'); ?>
         <?php include ('templates/footer_facturas.php'); ?>
@@ -380,6 +380,7 @@ if ($colaborador_id != '' || $colaborador_id != null) {
         include '../js/main.php';
         include '../js/invoice.php';
         include '../js/myjava_pacientes.php';
+        include '../js/local_storage.php';
         include '../js/myjava_atencion_medica.php';
         include '../js/select.php';
         include '../js/functions.php';
