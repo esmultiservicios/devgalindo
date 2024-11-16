@@ -1,15 +1,14 @@
 <?php
-session_start();   
-include "../funtions.php";
+session_start();
+include '../funtions.php';
 
-header("Content-Type: text/html;charset=utf-8");
+header('Content-Type: text/html;charset=utf-8');
 
-include_once "../../dompdf/autoload.inc.php";
-require_once '../../pdf/vendor/autoload.php';
+require_once '../../dompdf/vendor/autoload.php';
 
 use Dompdf\Dompdf;
-	 	
-//CONEXION A DB
+
+// CONEXION A DB
 $mysqli = connect_mysqli();
 
 $noFactura = $_GET['facturas_id'];
@@ -28,36 +27,36 @@ $query = "SELECT CONCAT(p.nombre, ' ', p.apellido) AS 'paciente', p.identidad AS
 	INNER JOIN servicios AS s
 	ON f.servicio_id = s.servicio_id
     INNER JOIN puesto_colaboradores AS pc
-    ON c.puesto_id = pc.puesto_id	
+    ON c.puesto_id = pc.puesto_id\t
     LEFT JOIN atenciones_medicas AS am
-    ON f.pacientes_id = am.pacientes_id	
-	WHERE f.facturas_id = '$noFactura'";	
+    ON f.pacientes_id = am.pacientes_id\t
+	WHERE f.facturas_id = '$noFactura'";
 $result = $mysqli->query($query) or die($mysqli->error);
 
-//OBTENER DETALLE DE FACTURA
+// OBTENER DETALLE DE FACTURA
 $query_factura_detalle = "SELECT p.nombre AS 'producto', fd.cantidad As 'cantidad', fd.precio AS 'precio', fd.descuento AS 'descuento', fd.productos_id  AS 'productos_id', fd.isv_valor AS 'isv_valor'
 FROM facturas_detalle AS fd
 INNER JOIN productos AS p
 ON fd.productos_id = p.productos_id
 WHERE facturas_id = '$noFactura'";
-$result_factura_detalle = $mysqli->query($query_factura_detalle) or die($mysqli->error);								
+$result_factura_detalle = $mysqli->query($query_factura_detalle) or die($mysqli->error);
 
-if($result->num_rows>0){
-	$consulta_registro = $result->fetch_assoc();	
-	
-	$no_factura = str_pad($consulta_registro['numero_factura'], $consulta_registro['relleno'], "0", STR_PAD_LEFT);
+if ($result->num_rows > 0) {
+	$consulta_registro = $result->fetch_assoc();
 
-	if($consulta_registro['estado'] == 3){
-		$anulada = '<img class="anulada" src="'.SERVERURL.'img/anulado.png" alt="Anulada">';
+	$no_factura = str_pad($consulta_registro['numero_factura'], $consulta_registro['relleno'], '0', STR_PAD_LEFT);
+
+	if ($consulta_registro['estado'] == 3) {
+		$anulada = '<img class="anulada" src="' . SERVERURL . 'img/anulado.png" alt="Anulada">';
 	}
 
 	ob_start();
-	include(dirname('__FILE__').'/factura.php');
+	include (dirname('__FILE__') . '/factura.php');
 	$html = ob_get_clean();
 
 	// instantiate and use the dompdf class
 	$dompdf = new Dompdf();
-	
+
 	$dompdf->set_option('isRemoteEnabled', true);
 
 	$dompdf->loadHtml(utf8_decode(utf8_encode($html)));
@@ -65,12 +64,12 @@ if($result->num_rows>0){
 	$dompdf->setPaper('letter', 'portrait');
 	// Render the HTML as PDF
 	$dompdf->render();
-	
-	file_put_contents(dirname('__FILE__').'/Facturas/factura_'.$no_factura.'.pdf', $dompdf->output());
-	
+
+	file_put_contents(dirname('__FILE__') . '/Facturas/factura_' . $no_factura . '.pdf', $dompdf->output());
+
 	// Output the generated PDF to Browser
-	$dompdf->stream('factura_'.$no_factura.'.pdf',array('Attachment'=>0));
-	
-	exit;	
+	$dompdf->stream('factura_' . $no_factura . '.pdf', array('Attachment' => 0));
+
+	exit;
 }
 ?>
