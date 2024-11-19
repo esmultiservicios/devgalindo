@@ -1,8 +1,8 @@
 <?php
-session_start();   
-include "../funtions.php";
-	
-//CONEXION A DB
+session_start();
+include '../funtions.php';
+
+// CONEXION A DB
 $mysqli = connect_mysqli();
 
 $nombre = cleanStringStrtolower($_POST['name']);
@@ -12,57 +12,57 @@ $telefono1 = $_POST['telefono1'];
 $telefono2 = $_POST['telefono2'];
 $fecha_nacimiento = $_POST['fecha_nac'];
 $correo = strtolower(cleanString($_POST['correo']));
-$fecha = date("Y-m-d");
+$fecha = date('Y-m-d');
 
-if(isset($_POST['departamento_id'])){//COMPRUEBO SI LA VARIABLE ESTA DIFINIDA
-	if($_POST['departamento_id'] == ""){
+if (isset($_POST['departamento_id'])) {  // COMPRUEBO SI LA VARIABLE ESTA DIFINIDA
+	if ($_POST['departamento_id'] == '') {
 		$departamento_id = 0;
-	}else{
+	} else {
 		$departamento_id = $_POST['departamento_id'];
 	}
-}else{
+} else {
 	$departamento_id = 0;
 }
 
-if(isset($_POST['municipio_id'])){//COMPRUEBO SI LA VARIABLE ESTA DIFINIDA
-	if($_POST['municipio_id'] == ""){
+if (isset($_POST['municipio_id'])) {  // COMPRUEBO SI LA VARIABLE ESTA DIFINIDA
+	if ($_POST['municipio_id'] == '') {
 		$municipio_id = 0;
-	}else{
+	} else {
 		$municipio_id = $_POST['municipio_id'];
 	}
-}else{
+} else {
 	$municipio_id = 0;
 }
 
-if(isset($_POST['pais_id'])){//COMPRUEBO SI LA VARIABLE ESTA DIFINIDA
-	if($_POST['pais_id'] == ""){
+if (isset($_POST['pais_id'])) {  // COMPRUEBO SI LA VARIABLE ESTA DIFINIDA
+	if ($_POST['pais_id'] == '') {
 		$pais_id = 0;
-	}else{
+	} else {
 		$pais_id = $_POST['pais_id'];
 	}
-}else{
+} else {
 	$pais_id = 0;
 }
 
 $responsable = $_POST['responsable'];
 
-if(isset($_POST['responsable_id'])){//COMPRUEBO SI LA VARIABLE ESTA DIFINIDA
-	if($_POST['responsable_id'] == ""){
+if (isset($_POST['responsable_id'])) {  // COMPRUEBO SI LA VARIABLE ESTA DIFINIDA
+	if ($_POST['responsable_id'] == '') {
 		$responsable_id = 0;
-	}else{
+	} else {
 		$responsable_id = $_POST['responsable_id'];
 	}
-}else{
+} else {
 	$responsable_id = 0;
 }
 
-if(isset($_POST['referido_id'])){//COMPRUEBO SI LA VARIABLE ESTA DIFINIDA
-	if($_POST['referido_id'] == ""){
+if (isset($_POST['referido_id'])) {  // COMPRUEBO SI LA VARIABLE ESTA DIFINIDA
+	if ($_POST['referido_id'] == '') {
 		$referido_id = 0;
-	}else{
+	} else {
 		$referido_id = $_POST['referido_id'];
 	}
-}else{
+} else {
 	$referido_id = 0;
 }
 
@@ -72,73 +72,73 @@ $profesion_id = 0;
 $identidad = $_POST['identidad'];
 $estado_civil = 0;
 $usuario = $_SESSION['colaborador_id'];
-$estado = 1; //1. Activo 2. Inactivo
-$fecha_registro = date("Y-m-d H:i:s");
+$estado = 1;  // 1. Activo 2. Inactivo
+$fecha_registro = date('Y-m-d H:i:s');
 
-//CONSULTAR IDENTIDAD DEL USUARIO
-if($identidad == 0){
+// CONSULTAR IDENTIDAD DEL USUARIO
+if ($identidad == 0) {
 	$flag_identidad = true;
-	while($flag_identidad){
-	   $d=rand(1,99999999);
-	   $query_identidadRand = "SELECT pacientes_id 
-	       FROM pacientes 
-		   WHERE identidad = '$d'";
-	   $result_identidad = $mysqli->query($query_identidadRand);
-	   if($result_identidad->num_rows==0){
-		  $identidad = $d;
-		  $flag_identidad = false;
-	   }else{
-		  $flag_identidad = true;
-	   }		
+	while ($flag_identidad) {
+		$d = rand(1, 99999999);
+		$query_identidadRand = "SELECT pacientes_id 
+\t       FROM pacientes 
+	\t   WHERE identidad = '$d'";
+		$result_identidad = $mysqli->query($query_identidadRand);
+		if ($result_identidad->num_rows == 0) {
+			$identidad = $d;
+			$flag_identidad = false;
+		} else {
+			$flag_identidad = true;
+		}
 	}
 }
 
-//EVALUAR SI EXISTE EL PACIENTE
+// EVALUAR SI EXISTE EL PACIENTE
 $select = "SELECT pacientes_id
 	FROM pacientes
 	WHERE identidad = '$identidad' AND nombre = '$nombre' AND apellido = '$apellido' AND telefono1 = '$telefono1'";
 $result = $mysqli->query($select) or die($mysqli->error);
 
-if($result->num_rows==0){
+if ($result->num_rows == 0) {
 	$pacientes_id = correlativo('pacientes_id ', 'pacientes');
 	$expediente = correlativo('expediente ', 'pacientes');
-	
+
 	$insert = "INSERT INTO pacientes 
-    (pacientes_id, expediente, identidad, nombre, apellido, genero, telefono1, telefono2, fecha_nacimiento, email, fecha, pais_id, departamento_id, municipio_id, localidad, religion_id, profesion_id, estado_civil, responsable, responsable_id, usuario, estado, fecha_registro, referido_id, escolaridad, red_apoyo, terapeuta_actual) 
+    (pacientes_id, expediente, identidad, nombre, apellido, genero, telefono1, telefono2, fecha_nacimiento, email, fecha, pais_id, departamento_id, municipio_id, localidad, religion_id, profesion_id, estado_civil, responsable, responsable_id, usuario, estado, fecha_registro, referido_id, escolaridad, red_apoyo, terapeuta_actual, religion_texto, profesion_texto, estado_civil_texto, escolaridad_texto) 
     VALUES 
-    ('$pacientes_id', '$expediente', '$identidad', '$nombre', '$apellido', '$sexo', '$telefono1', '$telefono2', '$fecha_nacimiento', '$correo', '$fecha', '$pais_id', '$departamento_id', '$municipio_id', '$localidad', '$religion_id', '$profesion_id', '$estado_civil', '$responsable', '$responsable_id', '$usuario', '$estado', '$fecha_registro', '$referido_id', '0', '','')";
-	
+    ('$pacientes_id', '$expediente', '$identidad', '$nombre', '$apellido', '$sexo', '$telefono1', '$telefono2', '$fecha_nacimiento', '$correo', '$fecha', '$pais_id', '$departamento_id', '$municipio_id', '$localidad', '$religion_id', '$profesion_id', '$estado_civil', '$responsable', '$responsable_id', '$usuario', '$estado', '$fecha_registro', '$referido_id', '0', '','','','','','')";
+
 	$query = $mysqli->query($insert);
-	
-	if($query){
+
+	if ($query) {
 		$datos = array(
-			0 => "Almacenado", 
-			1 => "Registro Almacenado Correctamente", 
-			2 => "success",
-			3 => "btn-primary",
-			4 => "formulario_pacientes",
-			5 => "Registro",
-			6 => "formPacientes",
-			7 => "modal_pacientes",
+			0 => 'Almacenado',
+			1 => 'Registro Almacenado Correctamente',
+			2 => 'success',
+			3 => 'btn-primary',
+			4 => 'formulario_pacientes',
+			5 => 'Registro',
+			6 => 'formPacientes',
+			7 => 'modal_pacientes',
 		);
-	}else{
+	} else {
 		$datos = array(
-			0 => "Error", 
-			1 => "No se puedo almacenar este registro, los datos son incorrectos por favor corregir", 
-			2 => "error",
-			3 => "btn-danger",
-			4 => "",
-			5 => "",			
+			0 => 'Error',
+			1 => 'No se puedo almacenar este registro, los datos son incorrectos por favor corregir',
+			2 => 'error',
+			3 => 'btn-danger',
+			4 => '',
+			5 => '',
 		);
 	}
-}else{
+} else {
 	$datos = array(
-		0 => "Error", 
-		1 => "Lo sentimos este registro ya existe no se puede almacenar", 
-		2 => "error",
-		3 => "btn-danger",
-		4 => "",
-		5 => "",		
+		0 => 'Error',
+		1 => 'Lo sentimos este registro ya existe no se puede almacenar',
+		2 => 'error',
+		3 => 'btn-danger',
+		4 => '',
+		5 => '',
 	);
 }
 

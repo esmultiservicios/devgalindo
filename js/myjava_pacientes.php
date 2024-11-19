@@ -108,6 +108,7 @@ function getDepartamentos() {
         success: function(data) {
             $('#formulario_pacientes #departamento_id').html("");
             $('#formulario_pacientes #departamento_id').html(data);
+            $('#form_mainformulario_pacientes #departamento_id').selectpicker('refresh');
         }
     });
 }
@@ -124,6 +125,7 @@ function getMunicipio() {
         success: function(data) {
             $('#formulario_pacientes #municipio_id').html("");
             $('#formulario_pacientes #municipio_id').html(data);
+            $('#formulario_pacientes #municipio_id').selectpicker('refresh');
         }
     });
 }
@@ -173,6 +175,7 @@ function getPais() {
 
             $('#formulario_pacientes #pais_id').html("");
             $('#formulario_pacientes #pais_id').html(data);
+            $('#formulario_pacientes #pais_id').selectpicker('refresh');
         }
     });
 }
@@ -1025,6 +1028,7 @@ function getSexo() {
         success: function(data) {
             $('#formulario_pacientes #sexo').html("");
             $('#formulario_pacientes #sexo').html(data);
+            $('#formulario_pacientes #sexo').selectpicker('refresh');
 
             $('#formulario_agregar_expediente_manual #sexo_manual').html("");
             $('#formulario_agregar_expediente_manual #sexo_manual').html(data);

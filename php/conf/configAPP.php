@@ -8,7 +8,7 @@
 const SERVERURL = 'http://localhost/devgalindo/';
 const SERVEREMPRESA = 'CAMI';
 const SERVER = 'localhost';
-const DB = 'clinicarehn_cami';
+const DB = 'clinicarehn_drgalindo';
 const USER = 'clinicarehn_clinicare';
 const PASS = 'Clin1c@r32022#';
 

@@ -1,19 +1,19 @@
-<?php 
-session_start();   
-include "../funtions.php";
+<?php
+session_start();
+include '../funtions.php';
 
 // CONEXION A DB
 $mysqli = connect_mysqli();
 
 header('Content-Type: application/json');
-$usuario = $_SESSION['colaborador_id'] ?? '';   
+$usuario = $_SESSION['colaborador_id'] ?? '';
 
 if (empty($usuario)) {
     echo json_encode(['error' => 'Usuario no autenticado']);
     exit;
 }
 
-$correlativo = "SELECT MAX(agenda_id) AS max, COUNT(agenda_id) AS count FROM agenda";
+$correlativo = 'SELECT MAX(agenda_id) AS max, COUNT(agenda_id) AS count FROM agenda';
 $result = $mysqli->query($correlativo);
 $correlativo2 = $result->fetch_assoc();
 
@@ -22,18 +22,18 @@ $cantidad = $correlativo2['count'] ?? 0;
 
 $numero = ($cantidad == 0) ? 1 : $numero + 1;
 
-$pacientes_id = $_POST['paciente_id'] ?? '';    
+$pacientes_id = $_POST['paciente_id'] ?? '';
 $color = $_POST['color'] ?? '';
 $fecha_cita = $_POST['fecha_cita'] ?? '';
-$fecha_start = date("Y-m-d", strtotime($fecha_cita));
-$fecha_cita_end = $_POST['fecha_cita_end'] ?? '';    
-$hora = $_POST['hora'] ?? '';    
-$medico = $_POST['medico'] ?? '';    
-$unidad = $_POST['unidad'] ?? '';        
-$observacion = ucwords(strtolower($_POST['obs'] ?? ''), " ");    
-$fecha_registro = date("Y-m-d H:i:s");
-$colaborador_id = $_POST['medico'] ?? '';    
-$fecha_consulta = date('Y-m-d');    
+$fecha_start = date('Y-m-d', strtotime($fecha_cita));
+$fecha_cita_end = $_POST['fecha_cita_end'] ?? '';
+$hora = $_POST['hora'] ?? '';
+$medico = $_POST['medico'] ?? '';
+$unidad = $_POST['unidad'] ?? '';
+$observacion = ucwords(strtolower($_POST['obs'] ?? ''), ' ');
+$fecha_registro = date('Y-m-d H:i:s');
+$colaborador_id = $_POST['medico'] ?? '';
+$fecha_consulta = date('Y-m-d');
 $servicio = $_POST['serv'] ?? '';
 $preclinica = 1;
 
@@ -43,7 +43,7 @@ $result = $mysqli->query($consultar_expediente);
 
 if ($result) {
     $consultar_expediente1 = $result->fetch_assoc();
-    $expediente = $consultar_expediente1['expediente'] ?? ''; 
+    $expediente = $consultar_expediente1['expediente'] ?? '';
     $nombre = $consultar_expediente1['nombre'] ?? '';
 } else {
     echo json_encode(['error' => 'Error en la consulta de expediente']);
@@ -67,7 +67,7 @@ $result = $mysqli->query($consulta_ultima_atencion);
 
 if ($result) {
     $consulta_ultima_atencion2 = $result->fetch_assoc();
-    $consulta_ultima_atencion_fecha = $consulta_ultima_atencion2['fecha'] ?? ''; 
+    $consulta_ultima_atencion_fecha = $consulta_ultima_atencion2['fecha'] ?? '';
 } else {
     echo json_encode(['error' => 'Error en la consulta de última atención']);
     exit;
@@ -90,7 +90,7 @@ $result = $mysqli->query($consulta_nombre_profesional);
 
 if ($result) {
     $consulta_nombre_profesional2 = $result->fetch_assoc();
-    $nombre_colaborador = $consulta_nombre_profesional2['nombre'] ?? ''; 
+    $nombre_colaborador = $consulta_nombre_profesional2['nombre'] ?? '';
 } else {
     echo json_encode(['error' => 'Error en la consulta de nombre del profesional']);
     exit;
@@ -102,7 +102,7 @@ $result = $mysqli->query($consulta_nombre_servicio);
 
 if ($result) {
     $consulta_nombre_servicio2 = $result->fetch_assoc();
-    $nombre_servicio = $consulta_nombre_servicio2['nombre'] ?? ''; 
+    $nombre_servicio = $consulta_nombre_servicio2['nombre'] ?? '';
 } else {
     echo json_encode(['error' => 'Error en la consulta de nombre del servicio']);
     exit;
@@ -117,7 +117,7 @@ if ($pacientes_id != 0 || $usuario != 0) {
 
             if ($result) {
                 $consulta_puesto1 = $result->fetch_assoc();
-                $puesto_colaborador = $consulta_puesto1['puesto_id'] ?? ''; 
+                $puesto_colaborador = $consulta_puesto1['puesto_id'] ?? '';
             } else {
                 echo json_encode(['error' => 'Error en la consulta de puesto']);
                 exit;
@@ -140,9 +140,9 @@ if ($pacientes_id != 0 || $usuario != 0) {
 
                 // Ingresar registros en la entidad historial
                 $historial_numero = historial();
-                $estado = "Agregar";
-                $observacion = "Se agendó una cita para este registro";
-                $modulo = "Citas";
+                $estado = 'Agregar';
+                $observacion = 'Se agendó una cita para este registro';
+                $modulo = 'Citas';
                 $insert = "INSERT INTO historial VALUES('$historial_numero','$pacientes_id','$expediente','$modulo','$numero','$colaborador_id','$servicio','$fecha_start','$estado','$observacion','$usuario','$fecha_registro')";
                 $mysqli->query($insert);
             }
@@ -154,12 +154,12 @@ if ($pacientes_id != 0 || $usuario != 0) {
             if ($result) {
                 $nacimiento2 = $result->fetch_assoc();
                 $fecha_nacimiento = $nacimiento2['fecha'] ?? '';
-                
+
                 if ($fecha_nacimiento) {
                     $valores_array = getEdad($fecha_nacimiento);
-                    $anos = $valores_array['anos'] ?? 0; 
-                    $meses = $valores_array['meses'] ?? 0; 
-                    $dias = $valores_array['dias'] ?? 0; 
+                    $anos = $valores_array['anos'] ?? 0;
+                    $meses = $valores_array['meses'] ?? 0;
+                    $dias = $valores_array['dias'] ?? 0;
                 } else {
                     $anos = $meses = $dias = 0;
                 }
@@ -167,36 +167,21 @@ if ($pacientes_id != 0 || $usuario != 0) {
                 $anos = $meses = $dias = 0;
             }
 
-            if ($query) {                   
-                // Lista de programación de citas
-                $correlativo_listaespera = "SELECT MAX(id) AS max, COUNT(id) AS count FROM lista_espera";
-                $result = $mysqli->query($correlativo_listaespera);
-                $correlativo_listaespera2 = $result->fetch_assoc();
+            if ($query) {
+                if ($expediente == 0) {
+                    $exp = 'TEMP';
+                } else {
+                    $exp = $expediente;
+                }
 
-                $numero_listaespera = $correlativo_listaespera2['max'] ?? 0;
-                $cantidad_listaespera = $correlativo_listaespera2['count'] ?? 0;
-
-                $numero_listaespera = ($cantidad_listaespera == 0) ? 1 : $numero_listaespera + 1;
-
-                $prioridad = ($anos <= 1 && $meses <= 3) ? 'ALTA' : 'BAJA';
-
-                $insert_lista_espera = "INSERT INTO lista_espera VALUES('$numero_listaespera', '$pacientes_id', '$expediente', '$nombre', '$fecha_cita', '$fecha_cita_end', '$hora', '$observacion', '$color', '$fecha_registro', '$colaborador_id', '$servicio', '$prioridad', '1', '0')";
-                $query_lista_espera = $mysqli->query($insert_lista_espera);
-
-				if ($expediente == 0){
-					$exp = "TEMP"; 
-				}else{
-					$exp = $expediente;
-				}
-				  
-				echo json_encode([
-					'success' => 'Cita agendada correctamente',
-					'id' => $numero,
-					'title' => $exp . '-' . $nombre,
-					'start' => $fecha_cita,
-					'end' => $fecha_cita_end,
-					'color' => $color
-				]);
+                echo json_encode([
+                    'success' => 'Cita agendada correctamente',
+                    'id' => $numero,
+                    'title' => $exp . '-' . $nombre,
+                    'start' => $fecha_cita,
+                    'end' => $fecha_cita_end,
+                    'color' => $color
+                ]);
             } else {
                 echo json_encode(['error' => 'No se pudo agendar la cita']);
             }
