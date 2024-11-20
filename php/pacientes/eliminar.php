@@ -38,7 +38,7 @@ if($result->num_rows==0){
 		$localidad = $consulta_expediente1['localidad'];
 		$religion_id = $consulta_expediente1['religion_id'];
 		$profesion_id = $consulta_expediente1['profesion_id'];
-		$identidad = $consulta_expediente1['identidad'];
+		$identidad = (!empty($consulta_expediente1['identidad'])) ? $consulta_expediente1['identidad'] : 0;
 		$usuario = $_SESSION['colaborador_id'];
 		$estado = 1; //1. Activo 2. Inactivo
 		$fecha_registro = date("Y-m-d H:i:s");

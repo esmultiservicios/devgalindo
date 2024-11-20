@@ -52,6 +52,7 @@ function addPacientes() {
 		$('#formulario_pacientes').attr({
 			'action': '<?php echo SERVERURL; ?>php/pacientes/agregarPacientes.php'
 		});
+        
 		$('#modal_pacientes').modal({
 			show: true,
 			keyboard: false,

@@ -90,6 +90,37 @@ $(document).ready(function() {
             });
         }
     });
+
+    $('#form_main #nuevo-registro').on('click', function() {
+        if (getUsuarioSistema() == 1 || getUsuarioSistema() == 2 || getUsuarioSistema() == 3 ||
+            getUsuarioSistema() == 5) {
+
+            $('#formulario_pacientes #pro').val("Registrar");
+            $('#grupo_expediente').hide();
+
+            $('#formulario_pacientes').attr({
+			    'data-form': 'save'
+            });
+            $('#formulario_pacientes').attr({
+                'action': '<?php echo SERVERURL; ?>php/pacientes/agregarPacientes.php'
+            });
+
+            $('#modal_pacientes').modal({
+                show: true,
+                keyboard: false,
+                backdrop: 'static'
+            });
+
+            return false;
+        } else {
+            swal({
+                title: "Acceso Denegado",
+                text: "No tiene permisos para ejecutar esta acción",
+                type: "error",
+                confirmButtonClass: 'btn-danger'
+            });
+        }
+    });
     //FIN ABRIR VENTANA MODAL PARA EL REGISTRO DE ATENCIONES DE PACIENTES
 
     //INICIO ABRIR VENTANA MODAL TRANSITO ENVIADA

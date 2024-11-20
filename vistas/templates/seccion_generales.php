@@ -42,7 +42,7 @@
     <div class="form-group col-md-2">
         <label for="servicio_id">Consultorio <span class="priority">*</span></label>
         <select class="selectpicker form-control" id="servicio_id" name="servicio_id" data-live-search="true"
-            title="Consultorio" data-width="100%" data-size="7">
+            title="Consultorio" data-width="100%" data-size="7" requiered>
         </select>
     </div>
     <div class="form-group col-md-2">
