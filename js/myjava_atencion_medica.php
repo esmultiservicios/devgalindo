@@ -107,14 +107,14 @@ $(document).ready(function() {
             success: (respuesta) => {
                 respuesta = JSON.parse(respuesta);
 
+                showFactura(respuesta.atencion_id);//LLAMAMOS LA FACTURA .-Función se encuentra en myjava_atencioN_medica.js
+
                 swal({
                     title: respuesta.title, 
                     text: respuesta.message,
                     type: respuesta.type, 
                     confirmButtonClass: respuesta.buttonClass
-                });
-
-                showFactura(datos[respuesta.atencion_id]);//LLAMAMOS LA FACTURA .-Función se encuentra en myjava_atencioN_medica.js
+                });                
             }
         });
     });
@@ -148,17 +148,73 @@ $(document).ready(function() {
             success: (respuesta) => {
                 respuesta = JSON.parse(respuesta);
 
+                showFactura(respuesta.atencion_id);//LLAMAMOS LA FACTURA .-Función se encuentra en myjava_atencioN_medica.js
+
                 swal({
                     title: respuesta.title, 
                     text: respuesta.message,
                     type: respuesta.type, 
                     confirmButtonClass: respuesta.buttonClass
                 });
-
-                showFactura(datos[respuesta.atencion_id]);//LLAMAMOS LA FACTURA .-Función se encuentra en myjava_atencioN_medica.js
             }
         });
-    });    
+    });  
+    
+    function showFactura(atencion_id) {
+        var url = '<?php echo SERVERURL; ?>php/atencion_pacientes/editarFactura.php';
+
+        $.ajax({
+            type: 'POST',
+            url: url,
+            data: 'atencion_id=' + atencion_id,
+            success: function(data) {
+                var datos = eval(data);
+                $('#formulario_facturacion')[0].reset();
+                $('#formulario_facturacion #pro').val("Registro");
+                $('#formulario_facturacion #pacientes_id').val(datos[0]);
+                $('#formulario_facturacion #pacientes_id').selectpicker('refresh');
+
+                $('#formulario_facturacion #fecha').val(getFechaActual());
+                $('#formulario_facturacion #colaborador_id').val(datos[3]);
+                $('#formulario_facturacion #colaborador_id').selectpicker('refresh');
+
+                $('#formulario_facturacion #servicio_id').val(datos[5]);
+                $('#formulario_facturacion #servicio_id').selectpicker('refresh');
+
+                $('#label_acciones_volver').html("ATA");
+                $('#label_acciones_receta').html("Receta");
+
+                $('#formulario_facturacion #fecha').attr("readonly", true);
+                $('#formulario_facturacion #validar').attr("disabled", false);
+                $('#formulario_facturacion #addRows').attr("disabled", false);
+                $('#formulario_facturacion #removeRows').attr("disabled", false);
+                $('#formulario_facturacion #validar').show();
+                $('#formulario_facturacion #editar').hide();
+                $('#formulario_facturacion #eliminar').hide();
+                limpiarTabla();
+
+                $('#main_facturacion').hide();
+                $('#atencionMedica').hide();
+                $('#facturacion').show();
+
+                $('#formulario_facturacion').attr({
+                    'data-form': 'save'
+                });
+                $('#formulario_facturacion').attr({
+                    'action': '<?php echo SERVERURL; ?>php/facturacion/addPreFactura.php'
+                });
+
+                $('#formulario_facturacion #validar').hide();
+                $('#formulario_facturacion #guardar1').hide();
+
+                $('.footer').hide();
+                $('.footer1').show();
+
+                cleanFooterValueBill();
+            }
+        });
+    }
+    
 
     $('#form_main #nuevo-registro').on('click', function() {
         if (getUsuarioSistema() == 1 || getUsuarioSistema() == 2 || getUsuarioSistema() == 3 ||
