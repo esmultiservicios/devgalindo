@@ -197,18 +197,14 @@ if ($pacientes_id != 0) {
 			$query = $mysqli->query($insert) or die($mysqli->error);
 
 			if ($query) {
-				$datos = array(
-					0 => 'Almacenado',
-					1 => 'Registro Almacenado Correctamente',
-					2 => 'success',
-					3 => 'btn-primary',
-					4 => 'formulario_atenciones',
-					5 => 'Registro',
-					6 => 'AtencionMedica',  // FUNCION DE LA TABLA QUE LLAMAREMOS PARA QUE ACTUALICE (DATATABLE BOOSTRAP)
-					7 => 'modal_registro_atenciones',  // Modals Para Cierre Automatico
-					8 => $atencion_id,
-					9 => 'Guardar',
-				);
+				$datos = [
+					'status' => 'success',
+					'title' => 'Success',
+					'message' => 'Registro Almacenado Correctamente',
+					'type' => 'success',
+					'buttonClass' => 'btn-primary',
+					'atencion_id' => $atencion_id
+				];
 
 				// ACTUALIZAMOS EL ESTADO DE LA AGENDA
 				$update = "UPDATE agenda SET status = '$status'
@@ -226,44 +222,40 @@ if ($pacientes_id != 0) {
 				$mysqli->query($insert) or die($mysqli->error);
 				/********************************************/
 			} else {
-				$datos = array(
-					0 => 'Error',
-					1 => 'No se puedo almacenar este registro, los datos son incorrectos por favor corregir',
-					2 => 'error',
-					3 => 'btn-danger',
-					4 => '',
-					5 => '',
-				);
+				$datos = [
+					'status' => 'error',
+					'title' => 'error',
+					'message' => 'No se puedo almacenar este registro, los datos son incorrectos por favor corregir',
+					'type' => 'error',
+					'buttonClass' => 'btn-danger'
+				];
 			}
 		} else {
-			$datos = array(
-				0 => 'Error',
-				1 => 'Lo sentimos este registro ya existe no se puede almacenar',
-				2 => 'error',
-				3 => 'btn-danger',
-				4 => '',
-				5 => '',
-			);
+			$datos = [
+				'status' => 'error',
+				'title' => 'error',
+				'message' => 'Lo sentimos este registro ya existe no se puede almacenar',
+				'type' => 'error',
+				'buttonClass' => 'btn-danger'
+			];
 		}
 	} else {
-		$datos = array(
-			0 => 'Error',
-			1 => 'Lo sentimos, debe seleccionar un consultorio antes de continuar, por favor corregir',
-			2 => 'error',
-			3 => 'btn-danger',
-			4 => '',
-			5 => '',
-		);
+		$datos = [
+			'status' => 'error',
+			'title' => 'error',
+			'message' => 'Lo sentimos, debe seleccionar un consultorio antes de continuar, por favor corregir',
+			'type' => 'error',
+			'buttonClass' => 'btn-danger'
+		];
 	}
 } else {
-	$datos = array(
-		0 => 'Error',
-		1 => 'Lo sentimos, debe seleccionar un paciente antes de continuar, por favor corregir',
-		2 => 'error',
-		3 => 'btn-danger',
-		4 => '',
-		5 => '',
-	);
+	$datos = [
+		'status' => 'error',
+		'title' => 'error',
+		'message' => 'Lo sentimos, debe seleccionar un paciente antes de continuar, por favor corregir',
+		'type' => 'error',
+		'buttonClass' => 'btn-danger'
+	];
 }
 
 echo json_encode($datos);

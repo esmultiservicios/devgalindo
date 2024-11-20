@@ -65,20 +65,7 @@ $(document).ready(function() {
             //HABILITAR OBJETOS
             $('#formulario_atenciones #paciente_consulta').attr('disabled', false);
 
-            $('#formulario_atenciones').attr({
-                'data-form': 'save'
-            });
-            $('#formulario_atenciones').attr({
-                'action': '<?php echo SERVERURL; ?>php/atencion_pacientes/agregar.php'
-            });
-
             FormAtencionMedica();
-
-            /*$('#modal_registro_atenciones').modal({
-                show: true,
-                keyboard: false,
-                backdrop: 'static'
-            });*/
 
             return false;
         } else {
@@ -90,6 +77,88 @@ $(document).ready(function() {
             });
         }
     });
+
+    $('#reg_atencion').on('click', (e) => {
+        e.preventDefault();
+        
+        // Obtener los valores de los campos
+        let servicio_id = $('#servicio_id').val();
+
+        // Validar que servicio_id no esté vacío
+        if (!servicio_id) {
+            swal({
+                title: 'Error',
+                text: 'Por favor, selecciona un servicio.',
+                type: 'error',
+                confirmButtonClass: 'btn-danger'
+            });
+            return; // Detener el proceso si servicio_id está vacío
+        }
+
+        let url = '<?php echo SERVERURL; ?>php/atencion_pacientes/agregar.php';
+        let formData = new FormData($('#formulario_atenciones')[0]);
+
+        $.ajax({
+            type: 'POST',
+            url: url,
+            data: formData,
+            processData: false,
+            contentType: false,
+            success: (respuesta) => {
+                respuesta = JSON.parse(respuesta);
+
+                swal({
+                    title: respuesta.title, 
+                    text: respuesta.message,
+                    type: respuesta.type, 
+                    confirmButtonClass: respuesta.buttonClass
+                });
+
+                showFactura(datos[respuesta.atencion_id]);//LLAMAMOS LA FACTURA .-Función se encuentra en myjava_atencioN_medica.js
+            }
+        });
+    });
+
+    $('#edi_atencion').on('click', (e) => {
+        e.preventDefault();
+        
+        // Obtener los valores de los campos
+        let servicio_id = $('#servicio_id').val();
+
+        // Validar que servicio_id no esté vacío
+        if (!servicio_id) {
+            swal({
+                title: 'Error',
+                text: 'Por favor, selecciona un servicio.',
+                type: 'error',
+                confirmButtonClass: 'btn-danger'
+            });
+            return; // Detener el proceso si servicio_id está vacío
+        }
+
+        let url = '<?php echo SERVERURL; ?>php/atencion_pacientes/agregarRegistro.php';
+        let formData = new FormData($('#formulario_atenciones')[0]);
+
+        $.ajax({
+            type: 'POST',
+            url: url,
+            data: formData,
+            processData: false,
+            contentType: false,
+            success: (respuesta) => {
+                respuesta = JSON.parse(respuesta);
+
+                swal({
+                    title: respuesta.title, 
+                    text: respuesta.message,
+                    type: respuesta.type, 
+                    confirmButtonClass: respuesta.buttonClass
+                });
+
+                showFactura(datos[respuesta.atencion_id]);//LLAMAMOS LA FACTURA .-Función se encuentra en myjava_atencioN_medica.js
+            }
+        });
+    });    
 
     $('#form_main #nuevo-registro').on('click', function() {
         if (getUsuarioSistema() == 1 || getUsuarioSistema() == 2 || getUsuarioSistema() == 3 ||
@@ -1831,8 +1900,6 @@ $('#acciones_atras').on('click', function(e) {
             }
         });
 
-        // Imprimir el contenido de formData después de excluir campos
-        console.log('Contenido de formData después de excluir campos:', formData);
 
         // Verificar si hay datos relevantes en el formulario
         const tieneDatos = Object.keys(formData).some(key => {
@@ -1840,9 +1907,7 @@ $('#acciones_atras').on('click', function(e) {
             // Chequear si el valor no es vacío, "0", null, o "undefined"
             return valor.trim() !== "" && valor !== "0" && valor !== "null" && valor !== "undefined";
         });
-
-        console.log('¿Tiene datos relevantes?:', tieneDatos);
-
+        
         if (tieneDatos) {
             // Mostrar SweetAlert si el formulario tiene datos relevantes
             swal({
@@ -1901,61 +1966,6 @@ function getProfesional() {
         }
     });
     return profesional;
-}
-
-function showFactura(atencion_id) {
-    var url = '<?php echo SERVERURL; ?>php/atencion_pacientes/editarFactura.php';
-
-    $.ajax({
-        type: 'POST',
-        url: url,
-        data: 'atencion_id=' + atencion_id,
-        success: function(data) {
-            var datos = eval(data);
-            $('#formulario_facturacion')[0].reset();
-            $('#formulario_facturacion #pro').val("Registro");
-            $('#formulario_facturacion #pacientes_id').val(datos[0]);
-            $('#formulario_facturacion #pacientes_id').selectpicker('refresh');
-
-            $('#formulario_facturacion #fecha').val(getFechaActual());
-            $('#formulario_facturacion #colaborador_id').val(datos[3]);
-            $('#formulario_facturacion #colaborador_id').selectpicker('refresh');
-
-            $('#formulario_facturacion #servicio_id').val(datos[5]);
-            $('#formulario_facturacion #servicio_id').selectpicker('refresh');
-
-            $('#label_acciones_volver').html("ATA");
-            $('#label_acciones_receta').html("Receta");
-
-            $('#formulario_facturacion #fecha').attr("readonly", true);
-            $('#formulario_facturacion #validar').attr("disabled", false);
-            $('#formulario_facturacion #addRows').attr("disabled", false);
-            $('#formulario_facturacion #removeRows').attr("disabled", false);
-            $('#formulario_facturacion #validar').show();
-            $('#formulario_facturacion #editar').hide();
-            $('#formulario_facturacion #eliminar').hide();
-            limpiarTabla();
-
-            $('#main_facturacion').hide();
-            $('#atencionMedica').hide();
-            $('#facturacion').show();
-
-            $('#formulario_facturacion').attr({
-                'data-form': 'save'
-            });
-            $('#formulario_facturacion').attr({
-                'action': '<?php echo SERVERURL; ?>php/facturacion/addPreFactura.php'
-            });
-
-            $('#formulario_facturacion #validar').hide();
-            $('#formulario_facturacion #guardar1').hide();
-
-            $('.footer').hide();
-            $('.footer1').show();
-
-            cleanFooterValueBill();
-        }
-    });
 }
 
 $(document).ready(function() {

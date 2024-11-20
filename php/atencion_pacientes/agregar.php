@@ -102,14 +102,13 @@ $consultar_expediente = "SELECT a.agenda_id
 	ON a.colaborador_id = c.colaborador_id
 	WHERE a.pacientes_id = '$pacientes_id' AND c.colaborador_id = '$colaborador_id' AND a.status = 1";
 $result = $mysqli->query($consultar_expediente) or die($mysqli->error);
-$consultar_expediente1 = $result->fetch_assoc();
 
-if ($consultar_expediente1['agenda_id'] == '') {
-	$paciente = 'N';
+$tipo_paciente = 'S';
+$color = '#0071c5';  // AZUL;
+
+if ($result_fecha_nacimiento->num_rows > 0) {
+	$tipo_paciente = 'N';
 	$color = '#008000';  // VERDE;
-} else {
-	$paciente = 'S';
-	$color = '#0071c5';  // AZUL;
 }
 /*********************************************************************************************************************************************************************/
 
@@ -195,7 +194,7 @@ if ($pacientes_id != 0) {
 					'$pendientes',
 					'$diagnostico',
 					'$seguimiento',
-					'$paciente',
+					'$tipo_paciente',
 					'$servicio_id',
 					'$colaborador_id',
 					'$num_hijos',
@@ -206,18 +205,14 @@ if ($pacientes_id != 0) {
 				$query = $mysqli->query($insert) or die($mysqli->error);
 
 				if ($query) {
-					$datos = array(
-						0 => 'Almacenado',
-						1 => 'Registro Almacenado Correctamente',
-						2 => 'success',
-						3 => 'btn-primary',
-						4 => 'formulario_atenciones',
-						5 => 'Registro',
-						6 => 'AtencionMedica',  // FUNCION DE LA TABLA QUE LLAMAREMOS PARA QUE ACTUALICE (DATATABLE BOOSTRAP)
-						7 => 'modal_registro_atenciones',  // Modals Para Cierre Automatico
-						8 => $atencion_id,
-						9 => 'Guardar',
-					);
+					$datos = [
+						'status' => 'success',
+						'title' => 'Success',
+						'message' => 'Registro Almacenado Correctamente',
+						'type' => 'success',
+						'buttonClass' => 'btn-primary',
+						'atencion_id' => $atencion_id
+					];
 
 					$observacion = 'Usuario agregado de forma manual';
 					$comentario = '';
@@ -229,7 +224,7 @@ if ($pacientes_id != 0) {
 					/*********************************************************************************************************************************************************************/
 					// AGREGAMOS LA AGENDA DEL PACINETE
 					$correlativo_agenda = correlativo('agenda_id', 'agenda');
-					$insert_agenda = "INSERT INTO agenda VALUES ('$correlativo_agenda','$pacientes_id','$expediente','$colaborador_id','$hora','$fecha_cita','$fecha_cita_end','$fecha_registro','$status','$color','$observacion','$colaborador_id','$servicio_id','$comentario','$preclinica','$postclinica','$reprogramo','$paciente','$status_id')";
+					$insert_agenda = "INSERT INTO agenda VALUES ('$correlativo_agenda','$pacientes_id','$expediente','$colaborador_id','$hora','$fecha_cita','$fecha_cita_end','$fecha_registro','$status','$color','$observacion','$colaborador_id','$servicio_id','$comentario','$preclinica','$postclinica','$reprogramo','$tipo_paciente','$status_id')";
 
 					$mysqli->query($insert_agenda) or die($mysqli->error);
 					/*********************************************************************************************************************************************************************/
@@ -244,54 +239,49 @@ if ($pacientes_id != 0) {
 					$mysqli->query($insert) or die($mysqli->error);
 					/*********************************************************************************************************************************************************************/
 				} else {
-					$datos = array(
-						0 => 'Error',
-						1 => 'No se puedo almacenar este registro, los datos son incorrectos por favor corregir',
-						2 => 'error',
-						3 => 'btn-danger',
-						4 => '',
-						5 => '',
-					);
+					$datos = [
+						'status' => 'error',
+						'title' => 'error',
+						'message' => 'No se puedo almacenar este registro, los datos son incorrectos por favor corregir',
+						'type' => 'error',
+						'buttonClass' => 'btn-danger'
+					];
 				}
 			} else {
-				$datos = array(
-					0 => 'Error',
-					1 => 'Lo sentimos este registro ya existe no se puede almacenar',
-					2 => 'error',
-					3 => 'btn-danger',
-					4 => '',
-					5 => '',
-				);
+				$datos = [
+					'status' => 'error',
+					'title' => 'error',
+					'message' => 'Lo sentimos este registro ya existe no se puede almacenar',
+					'type' => 'error',
+					'buttonClass' => 'btn-danger'
+				];
 			}
 		} else {
-			$datos = array(
-				0 => 'Error',
-				1 => 'Lo sentimos, este paciente ya cuenta con agenda almacenada para este día, por favor, revise sus registros pendientes',
-				2 => 'error',
-				3 => 'btn-danger',
-				4 => '',
-				5 => '',
-			);
+			$datos = [
+				'status' => 'error',
+				'title' => 'error',
+				'message' => 'Lo sentimos, este paciente ya cuenta con agenda almacenada para este día, por favor, revise sus registros pendientes',
+				'type' => 'error',
+				'buttonClass' => 'btn-danger'
+			];
 		}
 	} else {
-		$datos = array(
-			0 => 'Error',
-			1 => 'Lo sentimos, debe seleccionar un consultorio antes de continuar, por favor corregir',
-			2 => 'error',
-			3 => 'btn-danger',
-			4 => '',
-			5 => '',
-		);
+		$datos = [
+			'status' => 'error',
+			'title' => 'error',
+			'message' => 'Lo sentimos, debe seleccionar un consultorio antes de continuar, por favor corregir',
+			'type' => 'error',
+			'buttonClass' => 'btn-danger'
+		];
 	}
 } else {
-	$datos = array(
-		0 => 'Error',
-		1 => 'Lo sentimos, debe seleccionar un paciente antes de continuar, por favor corregir',
-		2 => 'error',
-		3 => 'btn-danger',
-		4 => '',
-		5 => '',
-	);
+	$datos = [
+		'status' => 'error',
+		'title' => 'error',
+		'message' => 'Lo sentimos, debe seleccionar un paciente antes de continuar, por favor corregir',
+		'type' => 'error',
+		'buttonClass' => 'btn-danger'
+	];
 }
 
 echo json_encode($datos);
