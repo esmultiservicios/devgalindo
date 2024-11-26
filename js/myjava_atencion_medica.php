@@ -8,6 +8,9 @@ $(document).ready(function() {
     getColaboradoresFacturacion();
     getPacientesFacturacion();
     getServiciosFacturacion();
+    getDepartamentos();
+    getReferido();
+    getResponsable();
 });
 
 /*INICIO DE FUNCIONES PARA ESTABLECER EL FOCUS PARA LAS VENTANAS MODALES*/
@@ -229,6 +232,8 @@ $(document).ready(function() {
             $('#formulario_pacientes').attr({
                 'action': '<?php echo SERVERURL; ?>php/pacientes/agregarPacientes.php'
             });
+
+            $('#formulario_pacientes').trigger("reset");
 
             $('#modal_pacientes').modal({
                 show: true,
@@ -1885,6 +1890,9 @@ function FormAtencionMedica() {
     $('#acciones_atras').removeClass("active");
     $('#acciones_factura').addClass("active");
     $('#label_acciones_factura').html("Historia Clinica");
+
+    $('#formulario_atenciones').trigger("reset");
+    $('#formulario_atenciones #pro').val('Registro');
 
     accion = false;
 }
