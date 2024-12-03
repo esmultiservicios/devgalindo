@@ -18,7 +18,7 @@ if (isset($_POST['paciente_consulta'])) {  // COMPRUEBO SI LA VARIABLE ESTA DIFI
 $fecha = $_POST['fecha'];
 $servicio_id = $_POST['servicio_id'];
 
-$num_hijos = $_POST['num_hijos'];
+$num_hijos = isset($_POST['num_hijos']) && $_POST['num_hijos'] !== '' ? intval($_POST['num_hijos']) : 0;
 
 $localidad = cleanStringStrtolower($_POST['procedencia']);
 

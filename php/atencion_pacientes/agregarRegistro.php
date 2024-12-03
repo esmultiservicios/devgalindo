@@ -17,7 +17,8 @@ $identidad = $_POST['identidad'];
 $fecha_nac = $_POST['fecha_nac'];
 $telefono1 = $_POST['telefono1'];
 
-$num_hijos = $_POST['num_hijos'];
+$num_hijos = isset($_POST['num_hijos']) && $_POST['num_hijos'] !== '' ? intval($_POST['num_hijos']) : 0;
+
 $colaborador_id = $_SESSION['colaborador_id'];
 $hora = date('H:i', strtotime('00:00'));
 $fecha_cita = date('Y-m-d H:i:s', strtotime($fecha));
