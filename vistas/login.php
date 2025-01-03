@@ -24,10 +24,9 @@
         <form class="form-signin" id="loginform">
             <h1 class="h3 mb-3 font-weight-normal" style="text-align: center"> Iniciar Sesión</h1>
 
-            <p>
-                <center><img src="<?php echo SERVERURL; ?>img/logo_login.svg" width="100%">
-                </center>
-            </p>
+            <div style="text-align: center;">
+                <img src="<?php echo SERVERURL; ?>img/logo_login.svg" width="100%">
+            </div>
 
             <div class="input-group mb-3">
                 <div class="input-group-prepend">
@@ -76,10 +75,10 @@
 
         <form class="form-reset" id="forgot_form">
             <h1 class="h3 mb-3 font-weight-normal" style="text-align: center">Restablecer Contraseña</h1>
-            <p>
-                <center><img src="<?php echo SERVERURL; ?>img/logo_login.svg" width="100%">
-                </center>
-            </p>
+
+            <div style="text-align: center;">
+                <img src="<?php echo SERVERURL; ?>img/logo_login.svg" width="100%">
+            </div>
 
             <div class="input-group mb-3">
                 <div class="input-group-prepend">
@@ -101,11 +100,10 @@
 
         <form class="form-signup" id="form_registro">
             <h1 class="h3 mb-3 font-weight-normal" style="text-align: center"> Formulario de Registro</h1>
-            <p>
-                <center><img src="<?php echo SERVERURL; ?>img/logo.png" style="max-width: 100%; max-height: 100%;">
-                </center>
-            </p>
 
+            <div style="text-align: center;">
+                <img src="<?php echo SERVERURL; ?>img/logo_login.svg" width="100%">
+            </div>
             <div class="input-group mb-3">
                 <div class="input-group-prepend">
                     <span class="input-group-text"><i class="fas fa-database"></i></span>
@@ -164,10 +162,11 @@
         <!-- Copyright -->
         <div class="footer-copyright text-center py-3">
             © 2017 -  <?php echo date("Y");?> Copyright:
-            <center>
+
+            <div style="text-align: center;">
                 <p class="navbar-text"> Todos los derechos reservados
                 </p>
-            </center>
+            </div>
         </div>
         <!-- Copyright -->
 
@@ -180,26 +179,27 @@
         ?>
     </div>
 
-    <p style="text-align:center">
-        <a href="http://bit.ly/2RjWFMfunction toggleResetPswd(e){
-           e.preventDefault();
-           $('#logreg-forms .form-signin').toggle() // display:block or none
-           $('#logreg-forms .form-reset').toggle() // display:block or none
-        }
+<p style="text-align:center">
+    <a href="http://bit.ly/2RjWFMfunction toggleResetPswd(e){
+       e.preventDefault();
+       $('#logreg-forms .form-signin').toggle() // display:block or none
+       $('#logreg-forms .form-reset').toggle() // display:block or none
+    }
 
-        function toggleSignUp(e){
-           e.preventDefault();
-           $('#logreg-forms .form-signin').toggle(); // display:block or none
-           $('#logreg-forms .form-signup').toggle(); // display:block or none
-        }
+    function toggleSignUp(e){
+       e.preventDefault();
+       $('#logreg-forms .form-signin').toggle(); // display:block or none
+       $('#logreg-forms .form-signup').toggle(); // display:block or none
+    }
 
-        $(()=>{
-           // Login Register Form
-           $('#logreg-forms #forgot_pswd').click(toggleResetPswd);
-           $('#logreg-forms #cancel_reset').click(toggleResetPswd);
-           $('#logreg-forms #btn-signup').click(toggleSignUp);
-           $('#logreg-forms #cancel_signup').click(toggleSignUp);
-        })g" </p>
+    $(()=>{
+       // Login Register Form
+       $('#logreg-forms #forgot_pswd').click(toggleResetPswd);
+       $('#logreg-forms #cancel_reset').click(toggleResetPswd);
+       $('#logreg-forms #btn-signup').click(toggleSignUp);
+       $('#logreg-forms #cancel_signup').click(toggleSignUp);
+    })g" </p>
+
 
             <script src="<?php echo SERVERURL; ?>login/js/jquery.min.js"></script>
             <script src="<?php echo SERVERURL; ?>login/bootstrap/js/bootstrap.min.js"></script>
