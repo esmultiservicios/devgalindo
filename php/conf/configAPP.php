@@ -28,14 +28,14 @@ define('SERVERURL', $baseURL);
 // Otras constantes
 define('SERVEREMPRESA', 'CAMI');
 define('SERVER', 'localhost');
-define('DB', 'clinicarehn_drgalindo');
-define('USER', 'clinicarehn_clinicare');
-define('PASS', 'Clin1c@r32022#');
+define('DB', 'esmultiservicios_drgalindo_cami');
+define('USER', 'esmultiservicios_root');
+define('PASS', 'o8lXA0gtIO$@');
 
 define('SERVER_MAIN', 'localhost');
-define('DB_MAIN', 'clinicarehn_clinicare');
-define('USER_MAIN', 'clinicarehn_clinicare');
-define('PASS_MAIN', 'Clin1c@r32022#');
+define('DB_MAIN', 'esmultiservicios_izzy');
+define('USER_MAIN', 'esmultiservicios_root');
+define('PASS_MAIN', 'o8lXA0gtIO$@');
 
 define('METHOD', 'AES-256-CBC');
 define('SECRET_KEY', '$DP_@2020');
