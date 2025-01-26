@@ -14,25 +14,31 @@ $('#acciones_atras').on('click', function(e){
 	 e.preventDefault();
 	 if($('#quoteForm #cliente').val() != "" || $('#quoteForm #cliente').val() != ""){
 		swal({
-		  title: "Tiene datos en la Cotización",
-		  text: "¿Esta seguro que desea volver, recuerde que tiene información en la cotización la perderá?",
-		  type: "warning",
-		  showCancelButton: true,
-		  confirmButtonClass: "btn-warning",
-		  confirmButtonText: "¡Si, deseo volver!",
-		  closeOnConfirm: false
-		},
-		function(){
-			$('#main_cotizacion').show();
-			$('#label_acciones_factura').html("");
-			$('#ctemplateCotizaciono').hide();
-			$('#acciones_atras').addClass("breadcrumb-item active");
-			$('#acciones_factura').removeClass("active");
-			$('#quoteForm')[0].reset();
-			swal.close();
-			$('.footer').show();
-     		$('.footer1').hide();				
-		});		 			 	
+			title: "Tiene datos en la Cotización",
+			text: "¿Esta seguro que desea volver, recuerde que tiene información en la cotización la perderá?",
+			icon: "warning",
+			buttons: {
+				cancel: {
+					text: "Cancelar",
+					visible: true
+				},
+				confirm: {
+					text: "¡Si, deseo volver!",
+				}
+			},
+			closeOnClickOutside: false
+		}).then((willConfirm) => {
+			if (willConfirm === true) {
+				$('#main_cotizacion').show();
+				$('#label_acciones_factura').html("");
+				$('#ctemplateCotizaciono').hide();
+				$('#acciones_atras').addClass("breadcrumb-item active");
+				$('#acciones_factura').removeClass("active");
+				$('#quoteForm')[0].reset();
+				$('.footer').show();
+				$('.footer1').hide();
+			}
+		});	 			 	
 	 }else{	 
 		 $('#main_cotizacion').show();
 		 $('#label_acciones_factura').html("");

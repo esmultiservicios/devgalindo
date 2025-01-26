@@ -20,7 +20,7 @@
 		<tr>
 			<td class="logo_factura">
 				<div>
-					<img src="<?php echo SERVERURL; ?>img/logo_factura.jpg" width="250px" height="100px">
+					<img src="<?php echo SERVERURL; ?>img/logo.svg" width="250px" height="100px">
 				</div>
 			</td>
 			<td class="info_empresa">

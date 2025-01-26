@@ -75,8 +75,8 @@ $(document).ready(function() {
             swal({
                 title: "Acceso Denegado",
                 text: "No tiene permisos para ejecutar esta acción",
-                type: "error",
-                confirmButtonClass: 'btn-danger'
+                icon: "error",
+                dangerMode: true
             });
         }
     });
@@ -92,8 +92,8 @@ $(document).ready(function() {
             swal({
                 title: 'Error',
                 text: 'Por favor, selecciona un servicio.',
-                type: 'error',
-                confirmButtonClass: 'btn-danger'
+                icon: 'error',
+                dangerMode: true
             });
             return; // Detener el proceso si servicio_id está vacío
         }
@@ -115,7 +115,7 @@ $(document).ready(function() {
                 swal({
                     title: respuesta.title, 
                     text: respuesta.message,
-                    type: respuesta.type, 
+                    icon: respuesta.type, 
                     confirmButtonClass: respuesta.buttonClass
                 });                
             }
@@ -133,8 +133,8 @@ $(document).ready(function() {
             swal({
                 title: 'Error',
                 text: 'Por favor, selecciona un servicio.',
-                type: 'error',
-                confirmButtonClass: 'btn-danger'
+                icon: 'error',
+                dangerMode: true
             });
             return; // Detener el proceso si servicio_id está vacío
         }
@@ -156,7 +156,7 @@ $(document).ready(function() {
                 swal({
                     title: respuesta.title, 
                     text: respuesta.message,
-                    type: respuesta.type, 
+                    icon: respuesta.type, 
                     confirmButtonClass: respuesta.buttonClass
                 });
             }
@@ -246,8 +246,8 @@ $(document).ready(function() {
             swal({
                 title: "Acceso Denegado",
                 text: "No tiene permisos para ejecutar esta acción",
-                type: "error",
-                confirmButtonClass: 'btn-danger'
+                icon: "error",
+                dangerMode: true
             });
         }
     });
@@ -269,8 +269,8 @@ $(document).ready(function() {
             swal({
                 title: "Acceso Denegado",
                 text: "No tiene permisos para ejecutar esta acción",
-                type: "error",
-                confirmButtonClass: 'btn-danger'
+                icon: "error",
+                dangerMode: true
             });
         }
     });
@@ -292,8 +292,8 @@ $(document).ready(function() {
             swal({
                 title: "Acceso Denegado",
                 text: "No tiene permisos para ejecutar esta acción",
-                type: "error",
-                confirmButtonClass: 'btn-danger'
+                icon: "error",
+                dangerMode: true
             });
         }
     });
@@ -307,7 +307,7 @@ $(document).ready(function() {
             swal({
                 title: "Advertencia",
                 text: "No puede cerrar esta venta, hay datos en el formulario, debe proceder con los datos de la facturación del paciente",
-                type: "warning",
+                icon: "warning",
                 confirmButtonClass: "btn-warning"
             });
             return false;
@@ -325,8 +325,8 @@ $(document).ready(function() {
             swal({
                 title: "Error",
                 text: "Hay registros en blanco, por favor llenar todos los datos del formulario antes de continuar",
-                type: "error",
-                confirmButtonClass: 'btn-danger'
+                icon: "error",
+                dangerMode: true
             });
             return false;
         }
@@ -354,8 +354,8 @@ $(document).ready(function() {
             swal({
                 title: "Acceso Denegado",
                 text: "No tiene permisos para ejecutar esta acción",
-                type: "error",
-                confirmButtonClass: 'btn-danger'
+                icon: "error",
+                dangerMode: true
             });
         }
     });
@@ -515,16 +515,16 @@ function editarRegistro(pacientes_id, agenda_id) {
             swal({
                 title: "Error",
                 text: "Lo sentimos, este registro ya existe, no se puede agregar nuevamente su atención",
-                type: "error",
-                confirmButtonClass: 'btn-danger'
+                icon: "error",
+                dangerMode: true
             });
         }
     } else {
         swal({
             title: "Acceso Denegado",
             text: "No tiene permisos para ejecutar esta acción",
-            type: "error",
-            confirmButtonClass: 'btn-danger'
+            icon: "error",
+            dangerMode: true
         });
     }
 }
@@ -546,35 +546,42 @@ function nosePresentoRegistro(pacientes_id, agenda_id) {
             swal({
                 title: "¿Esta seguro?",
                 text: "¿Desea remover este usuario: " + dato + " que no se presento a su cita?",
-                type: "input",
-                showCancelButton: true,
-                closeOnConfirm: false,
-                inputPlaceholder: "Comentario",
-                cancelButtonText: "Cancelar",
-                confirmButtonText: "¡Sí, remover el usuario!",
-                confirmButtonClass: "btn-warning",
-            }, function(inputValue) {
-                if (inputValue === false) return false;
-                if (inputValue === "") {
-                    swal.showInputError("¡Necesita escribir algo!");
-                    return false
+                content: {
+                    element: "input",
+                    attributes: {
+                        placeholder: "Comentario",
+                        type: "text",
+                    },
+                },
+                icon: "warning",
+                buttons: {
+                    cancel: "Cancelar",
+                    confirm: {
+                        text: "¡Sí, remover el usuario!",
+                        closeModal: false,
+                    },
+                },
+            }).then((value) => {
+                if (value === null || value.trim() === "") {
+                    swal("¡Necesita escribir algo!", { icon: "error" });
+                    return false;
                 }
-                eliminarRegistro(agenda_id, inputValue);
+                eliminarRegistro(agenda_id, value);
             });
         } else {
             swal({
                 title: "Error",
                 text: "Error al ejecutar esta acción, el usuario debe estar en estatus pendiente",
-                type: "error",
-                confirmButtonClass: 'btn-danger'
+                icon: "error",
+                dangerMode: true
             });
         }
     } else {
         swal({
             title: "Acceso Denegado",
             text: "No tiene permisos para ejecutar esta acción",
-            type: "error",
-            confirmButtonClass: 'btn-danger'
+            icon: "error",
+            dangerMode: true
         });
     }
 }
@@ -594,7 +601,7 @@ function eliminarRegistro(agenda_id, comentario, fecha) {
                 swal({
                     title: "Success",
                     text: "Ausencia almacenada correctamente",
-                    type: "success",
+                    icon: "success",
                     timer: 3000, //timeOut for auto-close
                 });
                 pagination(1);
@@ -603,24 +610,24 @@ function eliminarRegistro(agenda_id, comentario, fecha) {
                 swal({
                     title: "Error",
                     text: "Error al remover este registro",
-                    type: "error",
-                    confirmButtonClass: 'btn-danger'
+                    icon: "error",
+                    dangerMode: true
                 });
                 return false;
             } else if (registro == 3) {
                 swal({
                     title: "Error",
                     text: "Este registro ya tiene almacenada una ausencia",
-                    type: "error",
-                    confirmButtonClass: 'btn-danger'
+                    icon: "error",
+                    dangerMode: true
                 });
                 return false;
             } else {
                 swal({
                     title: "Error",
                     text: "Error al ejecutar esta acción",
-                    type: "error",
-                    confirmButtonClass: 'btn-danger'
+                    icon: "error",
+                    dangerMode: true
                 });
             }
         }
@@ -880,8 +887,8 @@ $('#reg_transitoe').on('click', function(
             swal({
                 title: 'Error',
                 text: 'No se pueden enviar los datos, los campos estan vacíos',
-                type: 'error',
-                confirmButtonClass: 'btn-danger'
+                icon: 'error',
+                dangerMode: true
             });
             return false;
         } else {
@@ -892,8 +899,8 @@ $('#reg_transitoe').on('click', function(
         swal({
             title: "Acceso Denegado",
             text: "No tiene permisos para ejecutar esta acción",
-            type: "error",
-            confirmButtonClass: 'btn-danger'
+            icon: "error",
+            dangerMode: true
         });
     }
 });
@@ -909,8 +916,8 @@ $('#reg_transitor').on('click', function(
             swal({
                 title: 'Error',
                 text: 'No se pueden enviar los datos, los campos estan vacíos',
-                type: 'error',
-                confirmButtonClass: 'btn-danger'
+                icon: 'error',
+                dangerMode: true
             });
             return false;
         } else {
@@ -921,8 +928,8 @@ $('#reg_transitor').on('click', function(
         swal({
             title: "Acceso Denegado",
             text: "No tiene permisos para ejecutar esta acción",
-            type: "error",
-            confirmButtonClass: 'btn-danger'
+            icon: "error",
+            dangerMode: true
         });
     }
 });
@@ -965,8 +972,8 @@ $(document).ready(function() {
             swal({
                 title: "Error",
                 text: "Por favor seleccione un tipo de descuento antes de continuar",
-                type: "error",
-                confirmButtonClass: 'btn-danger'
+                icon: "error",
+                dangerMode: true
             });
             $('#formulario_metodoPago #descuento').focus();
         } else {
@@ -1113,8 +1120,8 @@ function agregaRegistro() {
         swal({
             title: 'Error',
             text: 'No se puede agregar/modificar registros fuera de este periodo',
-            type: 'error',
-            confirmButtonClass: 'btn-danger'
+            icon: 'error',
+            dangerMode: true
         });
         return false;
     } else {
@@ -1123,8 +1130,8 @@ function agregaRegistro() {
             swal({
                 title: 'Error',
                 text: 'Debe seleccionar una fecha de nacimiento válida',
-                type: 'error',
-                confirmButtonClass: 'btn-danger'
+                icon: 'error',
+                dangerMode: true
             });
             return false;
         } else {
@@ -1144,24 +1151,24 @@ function agregaRegistro() {
                         swal({
                             title: "Error",
                             text: "Error al completar esta acción, no se puedo almacenar el registro",
-                            type: "error",
-                            confirmButtonClass: 'btn-danger'
+                            icon: "error",
+                            dangerMode: true
                         });
                         return false;
                     } else if (registro == 3) {
                         swal({
                             title: "Error",
                             text: "Lo sentimos, este registro ya ha sido almacenado",
-                            type: "error",
-                            confirmButtonClass: 'btn-danger'
+                            icon: "error",
+                            dangerMode: true
                         });
                         return false;
                     } else {
                         swal({
                             title: "Error",
                             text: "Error al procesar su solicitud, por favor intentelo de nuevo mas tarde",
-                            type: "error",
-                            confirmButtonClass: 'btn-danger'
+                            icon: "error",
+                            dangerMode: true
                         });
                         return false;
                     }
@@ -1188,8 +1195,8 @@ function agregar() {
         swal({
             title: 'Error',
             text: 'No se puede agregar/modificar registros fuera de este periodo',
-            type: 'error',
-            confirmButtonClass: 'btn-danger'
+            icon: 'error',
+            dangerMode: true
         });
         return false;
     } else {
@@ -1198,8 +1205,8 @@ function agregar() {
             swal({
                 title: 'Error',
                 text: 'Debe seleccionar una fecha de nacimiento válida',
-                type: 'error',
-                confirmButtonClass: 'btn-danger'
+                icon: 'error',
+                dangerMode: true
             });
             return false;
         } else {
@@ -1219,32 +1226,32 @@ function agregar() {
                         swal({
                             title: "Error",
                             text: "Error al completar esta acción, no se puedo almacenar el registro",
-                            type: "error",
-                            confirmButtonClass: 'btn-danger'
+                            icon: "error",
+                            dangerMode: true
                         });
                         return false;
                     } else if (registro == 3) {
                         swal({
                             title: "Error",
                             text: "Lo sentimos, este registro ya ha sido almacenado",
-                            type: "error",
-                            confirmButtonClass: 'btn-danger'
+                            icon: "error",
+                            dangerMode: true
                         });
                         return false;
                     } else if (registro == 4) {
                         swal({
                             title: "Error",
                             text: "Lo sentimos, este usuario ya se encuentra almacenado para este día, por favor verifique los registros de este paciente que aun está disponible en la agenda",
-                            type: "error",
-                            confirmButtonClass: 'btn-danger'
+                            icon: "error",
+                            dangerMode: true
                         });
                         return false;
                     } else {
                         swal({
                             title: "Error",
                             text: "Error al procesar su solicitud, por favor intentelo de nuevo mas tarde",
-                            type: "error",
-                            confirmButtonClass: 'btn-danger'
+                            icon: "error",
+                            dangerMode: true
                         });
                         return false;
                     }
@@ -1268,16 +1275,21 @@ function agregarMetodoPago() {
             if (registro == 1) {
                 $('#formulario_metodoPago')[0].reset();
                 swal({
-                        title: "Success",
-                        text: "Registro almacenado correctamente",
-                        type: "success",
-                        confirmButtonText: "¡Bien Hecho!",
-                        closeOnConfirm: false
+                    title: "Success",
+                    text: "Registro almacenado correctamente",
+                    icon: "warning",
+                    buttons: {
+                        confirm: {
+                            text: "¡Bien Hecho!",
+                        }
                     },
-                    function() {
+                    closeOnClickOutside: false
+                }).then((willConfirm) => {
+                    if (willConfirm === true) {
                         $('#metodoPago').modal('hide');
-                        swal.close();
-                    });
+                    }
+                });
+                
                 limpiarFormMetodoPago();
                 $("#formulario_metodoPago #reg").attr('disabled', true);
                 return false;
@@ -1285,24 +1297,24 @@ function agregarMetodoPago() {
                 swal({
                     title: "Error",
                     text: "Error al completar esta acción, no se puedo almacenar el registro",
-                    type: "error",
-                    confirmButtonClass: 'btn-danger'
+                    icon: "error",
+                    dangerMode: true
                 });
                 return false;
             } else if (registro == 3) {
                 swal({
                     title: "Error",
                     text: "Lo sentimos, este registro ya ha sido almacenado",
-                    type: "error",
-                    confirmButtonClass: 'btn-danger'
+                    icon: "error",
+                    dangerMode: true
                 });
                 return false;
             } else {
                 swal({
                     title: "Error",
                     text: "Error al procesar su solicitud, por favor intentelo de nuevo mas tarde",
-                    type: "error",
-                    confirmButtonClass: 'btn-danger'
+                    icon: "error",
+                    dangerMode: true
                 });
                 return false;
             }
@@ -1324,8 +1336,8 @@ function agregarTransitoEnviadas() {
         swal({
             title: 'Error',
             text: 'No se puede agregar/modificar registros fuera de este periodo',
-            type: 'error',
-            confirmButtonClass: 'btn-danger'
+            icon: 'error',
+            dangerMode: true
         });
         return false;
     } else {
@@ -1341,7 +1353,7 @@ function agregarTransitoEnviadas() {
                         swal({
                             title: 'Almacenado',
                             text: 'Registro almacenado correctamente',
-                            type: 'success',
+                            icon: 'success',
                             timer: 3000,
                         });
                         limpiarTE();
@@ -1351,15 +1363,15 @@ function agregarTransitoEnviadas() {
                         swal({
                             title: 'Error',
                             text: 'Error al intentar almacenar este registro',
-                            type: 'error',
-                            confirmButtonClass: 'btn-danger'
+                            icon: 'error',
+                            dangerMode: true
                         });
                         return false;
                     } else if (registro == 3) {
                         swal({
                             title: "Error",
                             text: "Este registro no cuenta con atencion almacenada",
-                            type: "error",
+                            icon: "error",
                             confirmButtonClass: "btn-danger"
                         });
                         return false;
@@ -1367,7 +1379,7 @@ function agregarTransitoEnviadas() {
                         swal({
                             title: "Error",
                             text: "Este registro ya existe",
-                            type: "error",
+                            icon: "error",
                             confirmButtonClass: "btn-danger"
                         });
                         return false;
@@ -1375,8 +1387,8 @@ function agregarTransitoEnviadas() {
                         swal({
                             title: "Error",
                             text: "Error al completar el registro",
-                            type: "error",
-                            confirmButtonClass: 'btn-danger'
+                            icon: "error",
+                            dangerMode: true
                         });
                         return false;
                     }
@@ -1386,8 +1398,8 @@ function agregarTransitoEnviadas() {
             swal({
                 title: 'Error',
                 text: 'No se puede agregar/modificar registros fuera de esta fecha',
-                type: 'error',
-                confirmButtonClass: 'btn-danger'
+                icon: 'error',
+                dangerMode: true
             });
             return false;
         }
@@ -1405,8 +1417,8 @@ function agregarTransitoRecibidas() {
         swal({
             title: 'Error',
             text: 'No se puede agregar/modificar registros fuera de este periodo',
-            type: 'error',
-            confirmButtonClass: 'btn-danger'
+            icon: 'error',
+            dangerMode: true
         });
         return false;
     } else {
@@ -1422,7 +1434,7 @@ function agregarTransitoRecibidas() {
                         swal({
                             title: 'Almacenado',
                             text: 'Registro almacenado correctamente',
-                            type: 'success',
+                            icon: 'success',
                             timer: 3000,
                         });
                         $('#registro_transito_recibida').modal('hide');
@@ -1432,32 +1444,32 @@ function agregarTransitoRecibidas() {
                         swal({
                             title: 'Error',
                             text: 'Error al intentar almacenar este registro',
-                            type: 'error',
-                            confirmButtonClass: 'btn-danger'
+                            icon: 'error',
+                            dangerMode: true
                         });
                         return false;
                     } else if (registro == 3) {
                         swal({
                             title: 'Error',
                             text: 'Este registro no cuenta con atencion almacenada',
-                            type: 'error',
-                            confirmButtonClass: 'btn-danger'
+                            icon: 'error',
+                            dangerMode: true
                         });
                         return false;
                     } else if (registro == 4) {
                         swal({
                             title: 'Error',
                             text: 'Este registro ya existe',
-                            type: 'error',
-                            confirmButtonClass: 'btn-danger'
+                            icon: 'error',
+                            dangerMode: true
                         });
                         return false;
                     } else {
                         swal({
                             title: 'Error',
                             text: 'Error al completar el registro',
-                            type: 'error',
-                            confirmButtonClass: 'btn-danger'
+                            icon: 'error',
+                            dangerMode: true
                         });
                         return false;
                     }
@@ -1467,8 +1479,8 @@ function agregarTransitoRecibidas() {
             swal({
                 title: 'Error',
                 text: 'No se puede agregar/modificar registros fuera de esta fecha',
-                type: 'error',
-                confirmButtonClass: 'btn-danger'
+                icon: 'error',
+                dangerMode: true
             });
             return false;
         }
@@ -1728,7 +1740,7 @@ function evaluarRegistrosPendientes() {
                     text: "Se le recuerda que tiene " + datos[0] + " " + string +
                         " de subir en las Atenciones Medicas en este mes de " + datos[1] +
                         ". Debe revisar sus registros pendientes.",
-                    type: 'warning',
+                    icon: 'warning',
                     confirmButtonClass: 'btn-warning'
                 });
             }
@@ -1977,22 +1989,29 @@ $('#acciones_atras').on('click', function(e) {
             swal({
                 title: title,
                 text: message,
-                type: "warning",
-                showCancelButton: true,
-                confirmButtonClass: "btn-warning",
-                confirmButtonText: "¡Sí, deseo volver!",
-                closeOnConfirm: false
-            }, function() {
-                $('#main_facturacion').show();
-                $('#atencionMedica').hide();
-                $('#label_acciones_factura').html("");
-                $('#facturacion').hide();
-                $('#acciones_atras').addClass("breadcrumb-item active");
-                $('#acciones_factura').removeClass("active");
-                $('#formulario_facturacion')[0].reset();
-                swal.close();
-                $('.footer').show();
-                $('.footer1').hide();
+                icon: "warning",
+                buttons: {
+                    cancel: {
+                        text: "Cancelar",
+                        visible: true
+                    },
+                    confirm: {
+                        text: "¡Si, deseo volver!",
+                    }
+                },
+                closeOnClickOutside: false
+            }).then((willConfirm) => {
+                if (willConfirm === true) {
+                    $('#main_facturacion').show();
+                    $('#atencionMedica').hide();
+                    $('#label_acciones_factura').html("");
+                    $('#facturacion').hide();
+                    $('#acciones_atras').addClass("breadcrumb-item active");
+                    $('#acciones_factura').removeClass("active");
+                    $('#formulario_facturacion')[0].reset();
+                    $('.footer').show();
+                    $('.footer1').hide();
+                }
             });
         } else {
             // Lógica para cuando no hay datos relevantes

@@ -25,7 +25,7 @@
             <h1 class="h3 mb-3 font-weight-normal" style="text-align: center"> Iniciar Sesión</h1>
 
             <div style="text-align: center;">
-                <img src="<?php echo SERVERURL; ?>img/logo_login.svg" width="100%">
+                <img src="<?php echo SERVERURL; ?>img/cami_logo.svg" width="100%">
             </div>
 
             <div class="input-group mb-3">
@@ -77,7 +77,7 @@
             <h1 class="h3 mb-3 font-weight-normal" style="text-align: center">Restablecer Contraseña</h1>
 
             <div style="text-align: center;">
-                <img src="<?php echo SERVERURL; ?>img/logo_login.svg" width="100%">
+                <img src="<?php echo SERVERURL; ?>img/cami_logo.svg" width="100%">
             </div>
 
             <div class="input-group mb-3">
@@ -102,7 +102,7 @@
             <h1 class="h3 mb-3 font-weight-normal" style="text-align: center"> Formulario de Registro</h1>
 
             <div style="text-align: center;">
-                <img src="<?php echo SERVERURL; ?>img/logo_login.svg" width="100%">
+                <img src="<?php echo SERVERURL; ?>img/cami_logo.svg" width="100%">
             </div>
             <div class="input-group mb-3">
                 <div class="input-group-prepend">
