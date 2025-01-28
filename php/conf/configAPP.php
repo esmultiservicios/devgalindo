@@ -25,7 +25,7 @@ $baseURL = $protocol . $serverName . $port . $basePath;
 // Definir la constante SERVERURL
 define('SERVERURL', $baseURL);
 
-$urlLogo = "https://wi.fastsolutionhn.com/files/skinghealt_logo.png";
+$urlLogo = "https://wi.fastsolutionhn.com/files/esmultiservicios_logo.png";
 define('SERVERURLLOGO', $urlLogo);
 
 $urlWindows = 'https://wi.fastsolutionhn.com/Rpt/esmultiservicios.aspx';
