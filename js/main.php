@@ -14,7 +14,9 @@ function reportePDF(agenda_id) {
             title: "Acceso Denegado",
             text: "No tiene permisos para ejecutar esta acción",
             icon: "error",
-            dangerMode: true
+            dangerMode: true,
+            closeOnEsc: false, // Desactiva el cierre con la tecla Esc
+            closeOnClickOutside: false // Desactiva el cierre al hacer clic fuera  
         });
         return false;
     }
@@ -256,7 +258,9 @@ var editar_productos_busqueda_dataTable = function(tbody, table) {
                 title: "Error",
                 text: "Lo sentimos no se puede seleccionar un producto, por favor seleccione un cliente antes de poder continuar",
                 icon: "error",
-                confirmButtonClass: "btn-danger"
+                dangerMode: true,
+                closeOnEsc: false, // Desactiva el cierre con la tecla Esc
+                closeOnClickOutside: false // Desactiva el cierre al hacer clic fuera  
             });
         }
     });
@@ -416,7 +420,9 @@ $("#formulario_facturacion #invoiceItem").on('click', '.producto', function() {
                 title: "Error",
                 text: "Lo sentimos no se puede efectuar la búsqueda, por favor seleccione un cliente antes de poder continuar",
                 icon: "error",
-                confirmButtonClass: "btn-danger"
+                dangerMode: true,
+                closeOnEsc: false, // Desactiva el cierre con la tecla Esc
+                closeOnClickOutside: false // Desactiva el cierre al hacer clic fuera  
             });
         }
     });
@@ -549,7 +555,9 @@ $("#formulario_facturacion #invoiceItem").on('click', '.producto', function() {
                 title: "Error",
                 text: "Lo sentimos no se puede efectuar la búsqueda, por favor seleccione un cliente antes de poder continuar",
                 icon: "error",
-                confirmButtonClass: "btn-danger"
+                dangerMode: true,
+                closeOnEsc: false, // Desactiva el cierre con la tecla Esc
+                closeOnClickOutside: false // Desactiva el cierre al hacer clic fuera  
             });
         }
     });
@@ -1013,6 +1021,9 @@ function viewReport(params) {
             text: "La URL de destino no está definida.",
             icon: "error",
             button: "Cerrar",
+            dangerMode: true,
+            closeOnEsc: false, // Desactiva el cierre con la tecla Esc
+            closeOnClickOutside: false // Desactiva el cierre al hacer clic fuera  
         });
         return; // Salir de la función si la URL no está definida
     }
@@ -1029,6 +1040,9 @@ function viewReport(params) {
             text: "Los parámetros enviados no son válidos.",
             icon: "error",
             button: "Cerrar",
+            dangerMode: true,
+            closeOnEsc: false, // Desactiva el cierre con la tecla Esc
+            closeOnClickOutside: false // Desactiva el cierre al hacer clic fuera  
         });
         return;
     }

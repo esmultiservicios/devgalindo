@@ -26,7 +26,9 @@ $('#acciones_atras').on('click', function(e){
 					text: "¡Si, deseo volver!",
 				}
 			},
-			closeOnClickOutside: false
+			dangerMode: true,
+			closeOnEsc: false, // Desactiva el cierre con la tecla Esc
+			closeOnClickOutside: false // Desactiva el cierre al hacer clic fuera
 		}).then((willConfirm) => {
 			if (willConfirm === true) {
 				$('#main_cotizacion').show();
