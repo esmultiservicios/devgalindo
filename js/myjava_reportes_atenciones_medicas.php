@@ -1,330 +1,388 @@
 <script>
+/* ============================================================
+   ✅ REPORTES ATENCIONES / TRANSITO - JS (SIN eval)
+   - Reemplaza eval(data) por parseServerPayload(data)
+   - Maneja respuestas JSON limpias
+   - Agrega manejo de error AJAX para diagnosticar
+============================================================ */
+
+// ============================
+// ✅ PARSER SEGURO
+// ============================
+function parseServerPayload(raw, ctx) {
+  if (raw == null) throw new Error(`[${ctx}] Respuesta vacía/null`);
+  if (typeof raw === "object") return raw;
+
+  const t = String(raw).trim();
+
+  // 1) JSON real
+  try { return JSON.parse(t); } catch (_) {}
+
+  // 2) Compatibilidad si el backend devuelve algo tipo: ['a','b']
+  // (ideal: eliminar cuando todo sea JSON)
+  try { return (new Function("return (" + t + ")"))(); }
+  catch (e) {
+    console.error(`❌ [${ctx}] Respuesta NO parseable:\n`, t);
+    throw e;
+  }
+}
+
 $(document).ready(function() {
-   getServicio();
-   getProfesionales();
-   pagination(1);
+  getServicio();
+  getProfesionales();
+  pagination(1);
 });
 
 $(document).ready(function() {
-  $('#form_main #servicio').on('change', function(){	
-     pagination(1);
+  $('#form_main #servicio').on('change', function(){
+    pagination(1);
   });
 });
 
 $(document).ready(function() {
   $('#form_main #colaborador').on('change', function(){
-     pagination(1);
+    pagination(1);
   });
 });
 
 $(document).ready(function() {
-  $('#form_main #fecha_i').on('change', function(){	
-     pagination(1);
+  $('#form_main #fecha_i').on('change', function(){
+    pagination(1);
   });
 });
 
 $(document).ready(function() {
-  $('#form_main #fecha_f').on('change', function(){	
-     pagination(1);
+  $('#form_main #fecha_f').on('change', function(){
+    pagination(1);
   });
 });
 
 $(document).ready(function() {
-  $('#form_main #bs_regis').on('keyup', function(){	
-     pagination(1);
+  $('#form_main #bs_regis').on('keyup', function(){
+    pagination(1);
   });
 });
 
 function getServicio(){
-    var url = '<?php echo SERVERURL; ?>php/reportes_atenciones_medicas/getServicio.php';		
-		
-	$.ajax({
-        type: "POST",
-        url: url,
-	    async: true,
-        success: function(data){	
-		    $('#form_main #servicio').html("");
-			$('#form_main #servicio').html(data);
-		}			
-     });	
+  var url = '<?php echo SERVERURL; ?>php/reportes_atenciones_medicas/getServicio.php';
+
+  $.ajax({
+    type: "POST",
+    url: url,
+    async: true,
+    success: function(data){
+      $('#form_main #servicio').html("");
+      $('#form_main #servicio').html(data);
+    },
+    error: function(xhr){
+      console.error("getServicio() AJAX error:", xhr.status, xhr.responseText);
+    }
+  });
 }
 
 function getProfesionales(){
-    var url = '<?php echo SERVERURL; ?>php/citas/getMedico.php';		
-		
-	$.ajax({
-        type: "POST",
-        url: url,
-        success: function(data){	
-		    $('#form_main #colaborador').html("");
-			$('#form_main #colaborador').html(data);		
-		}			
-     });	
+  var url = '<?php echo SERVERURL; ?>php/citas/getMedico.php';
+
+  $.ajax({
+    type: "POST",
+    url: url,
+    success: function(data){
+      $('#form_main #colaborador').html("");
+      $('#form_main #colaborador').html(data);
+    },
+    error: function(xhr){
+      console.error("getProfesionales() AJAX error:", xhr.status, xhr.responseText);
+    }
+  });
 }
 
 function pagination(partida){
-	var colaborador = '';
-	var desde = $('#form_main #fecha_i').val();
-	var hasta = $('#form_main #fecha_f').val();
-	var dato = $('#form_main #bs_regis').val();
-	var url = '<?php echo SERVERURL; ?>php/reportes_atenciones_medicas/paginar.php';	
-	
-	if($('#form_main #colaborador').val() == "" || $('#form_main #colaborador').val() == null){
-		colaborador = "";
-	}else{
-		colaborador = $('#form_main #colaborador').val();
-	}
+  var colaborador = '';
+  var desde = $('#form_main #fecha_i').val();
+  var hasta = $('#form_main #fecha_f').val();
+  var dato = $('#form_main #bs_regis').val();
+  var url = '<?php echo SERVERURL; ?>php/reportes_atenciones_medicas/paginar.php';
 
-	$.ajax({
-		type:'POST',
-		url:url,
-		data:'partida='+partida+'&desde='+desde+'&hasta='+hasta+'&colaborador='+colaborador+'&dato='+dato,	
-		success:function(data){
-			var array = eval(data);
-			$('#agrega-registros').html(array[0]);
-			$('#pagination').html(array[1]);			
-		}
-	});
-	return false;	
+  if($('#form_main #colaborador').val() == "" || $('#form_main #colaborador').val() == null){
+    colaborador = "";
+  }else{
+    colaborador = $('#form_main #colaborador').val();
+  }
+
+  $.ajax({
+    type:'POST',
+    url:url,
+    data:'partida='+partida+'&desde='+desde+'&hasta='+hasta+'&colaborador='+colaborador+'&dato='+dato,
+    success:function(data){
+      try{
+        // ✅ ANTES: var array = eval(data);
+        var array = parseServerPayload(data, "reportes_atenciones_medicas/paginar.php");
+
+        $('#agrega-registros').html(array[0]);
+        $('#pagination').html(array[1]);
+      }catch(e){
+        console.error(e);
+        swal({
+          title: "Error",
+          text: "La respuesta de paginar.php no vino en formato JSON válido. Revisá consola y Network > Response.",
+          icon: "error",
+          dangerMode: true,
+          closeOnEsc: false,
+          closeOnClickOutside: false
+        });
+      }
+    },
+    error: function(xhr){
+      console.error("pagination() AJAX error:", xhr.status, xhr.responseText);
+    }
+  });
+  return false;
 }
 
 function reporteEXCEL(){
-	var colaborador = '';
-	var desde = $('#form_main #fecha_i').val();
-	var hasta = $('#form_main #fecha_f').val();
-	var url = '';
-	
-	if($('#form_main #colaborador').val() == "" || $('#form_main #colaborador').val() == null){
-		colaborador = "";
-	}else{
-		colaborador = $('#form_main #colaborador').val();
-	}
-	 
-    url = '<?php echo SERVERURL; ?>php/reportes_atenciones_medicas/reporte.php?desde='+desde+'&hasta='+hasta+'&colaborador='+colaborador;
-	
-	window.open(url);
+  var colaborador = '';
+  var desde = $('#form_main #fecha_i').val();
+  var hasta = $('#form_main #fecha_f').val();
+  var url = '';
+
+  if($('#form_main #colaborador').val() == "" || $('#form_main #colaborador').val() == null){
+    colaborador = "";
+  }else{
+    colaborador = $('#form_main #colaborador').val();
+  }
+
+  url = '<?php echo SERVERURL; ?>php/reportes_atenciones_medicas/reporte.php?desde='+desde+'&hasta='+hasta+'&colaborador='+colaborador;
+  window.open(url);
 }
 
-function reporteEXCELDiario(){		
-	var servicio = '';
-	var colaborador = '';
-	var desde = $('#form_main #fecha_i').val();
-	var hasta = $('#form_main #fecha_f').val();
-	var url = '';
+function reporteEXCELDiario(){
+  var servicio = '';
+  var colaborador = '';
+  var desde = $('#form_main #fecha_i').val();
+  var hasta = $('#form_main #fecha_f').val();
+  var url = '';
 
-	if($('#form_main #servicio').val() == "" || $('#form_main #servicio').val() == null){
-		servicio = "";
-	}else{
-		servicio = $('#form_main #servicio').val();
-	}
-	
-	if($('#form_main #colaborador').val() == "" || $('#form_main #colaborador').val() == null){
-		colaborador = "";
-	}else{
-		colaborador = $('#form_main #colaborador').val();
-	}
+  if($('#form_main #servicio').val() == "" || $('#form_main #servicio').val() == null){
+    servicio = "";
+  }else{
+    servicio = $('#form_main #servicio').val();
+  }
 
-	var url = '<?php echo SERVERURL; ?>php/reportes_atenciones_medicas/reporteDiarioAtenciones.php?desde='+desde+'&hasta='+hasta+'&servicio='+servicio+'&colaborador='+colaborador;
-	window.open(url);			
+  if($('#form_main #colaborador').val() == "" || $('#form_main #colaborador').val() == null){
+    colaborador = "";
+  }else{
+    colaborador = $('#form_main #colaborador').val();
+  }
+
+  url = '<?php echo SERVERURL; ?>php/reportes_atenciones_medicas/reporteDiarioAtenciones.php?desde='+desde+'&hasta='+hasta+'&servicio='+servicio+'&colaborador='+colaborador;
+  window.open(url);
 }
 
 function limpiar(){
-	$('#unidad').html("");
-	$('#medico_general').html("");
-    $('#agrega-registros').html("");
-	$('#pagination').html("");		
-    getServicio();
-	pagination_transito(1);
+  $('#unidad').html("");
+  $('#medico_general').html("");
+  $('#agrega-registros').html("");
+  $('#pagination').html("");
+  getServicio();
+
+  // ⚠️ OJO: esta función no está en este script, la dejo como estaba
+  if (typeof pagination_transito === "function") pagination_transito(1);
 }
 
 function modal_eliminarTransitoRecibida(transito_id, expediente){
-   if (getUsuarioSistema() == 1 || getUsuarioSistema() == 2 || getUsuarioSistema() == 5){	
-	   mensajeEliminarTR("Remover","¿Desea eliminar el usuario <b>" + consultarNombre(expediente) + "</b>?");
-	   $('#eliminar_transito_recibida #dato').val(transito_id);	
-   }else{
-		swal({
-			title: "Acceso Denegado", 
-			text: "No tiene permisos para ejecutar esta acción",
-			icon: "error", 
-			dangerMode: true,
-			closeOnEsc: false, // Desactiva el cierre con la tecla Esc
-			closeOnClickOutside: false // Desactiva el cierre al hacer clic fuera
-		});		
-	}	
+  if (getUsuarioSistema() == 1 || getUsuarioSistema() == 2 || getUsuarioSistema() == 5){
+    mensajeEliminarTR("Remover","¿Desea eliminar el usuario <b>" + consultarNombre(expediente) + "</b>?");
+    $('#eliminar_transito_recibida #dato').val(transito_id);
+  }else{
+    swal({
+      title: "Acceso Denegado",
+      text: "No tiene permisos para ejecutar esta acción",
+      icon: "error",
+      dangerMode: true,
+      closeOnEsc: false,
+      closeOnClickOutside: false
+    });
+  }
 }
 
 function modal_eliminarTransitoEnviada(transito_id, expediente){
-   if (getUsuarioSistema() == 1 || getUsuarioSistema() == 2 || getUsuarioSistema() == 5){   
-	   mensajeEliminarTE("Remover","¿Desea eliminar el usuario <b>" + consultarNombre(expediente) + "</b>?");
-	   $('#eliminar_transito_enviada #dato').val(transito_id);	   
-   }else{
-		swal({
-			title: "Acceso Denegado", 
-			text: "No tiene permisos para ejecutar esta acción",
-			icon: "error", 
-			dangerMode: true,
-			closeOnEsc: false, // Desactiva el cierre con la tecla Esc
-			closeOnClickOutside: false // Desactiva el cierre al hacer clic fuera
-		});		 
-	}	
+  if (getUsuarioSistema() == 1 || getUsuarioSistema() == 2 || getUsuarioSistema() == 5){
+    mensajeEliminarTE("Remover","¿Desea eliminar el usuario <b>" + consultarNombre(expediente) + "</b>?");
+    $('#eliminar_transito_enviada #dato').val(transito_id);
+  }else{
+    swal({
+      title: "Acceso Denegado",
+      text: "No tiene permisos para ejecutar esta acción",
+      icon: "error",
+      dangerMode: true,
+      closeOnEsc: false,
+      closeOnClickOutside: false
+    });
+  }
 }
 
-$('#eliminar_transito_recibida #Si').on('click', function(e){ // add event submit We don't want this to act as a link so cancel the link action
-	 e.preventDefault();
-	 eliminarTransitoRecibida();		
+$('#eliminar_transito_recibida #Si').on('click', function(e){
+  e.preventDefault();
+  eliminarTransitoRecibida();
 });
 
-$('#eliminar_transito_enviada #Si').on('click', function(e){ // add event submit We don't want this to act as a link so cancel the link action
-	 e.preventDefault();
-	 eliminarTransitoEnviada();		 
+$('#eliminar_transito_enviada #Si').on('click', function(e){
+  e.preventDefault();
+  eliminarTransitoEnviada();
 });
 
 function eliminarTransitoRecibida(){
-  if (getUsuarioSistema() == 1 || getUsuarioSistema() == 2 || getUsuarioSistema() == 5){	
-	var url = '<?php echo SERVERURL; ?>php/reportes_transito/eliminarTransitoRecibida.php';
-	var id = $('#eliminar_transito_recibida #dato').val();
-		
-	var fecha = getFechaRegistroTransitoRecibida(id);
-	
+  if (getUsuarioSistema() == 1 || getUsuarioSistema() == 2 || getUsuarioSistema() == 5){
+    var url = '<?php echo SERVERURL; ?>php/reportes_transito/eliminarTransitoRecibida.php';
+    var id = $('#eliminar_transito_recibida #dato').val();
+
+    var fecha = getFechaRegistroTransitoRecibida(id);
+
     var hoy = new Date();
-    fecha_actual = convertDate(hoy);		
-	
-  if(getMes(fecha)==2){	  
-		swal({
-			title: "Error", 
-			text: "No se puede agregar/modificar registros fuera de este periodo",
-			icon: "error", 
-			dangerMode: true,
-			closeOnEsc: false, // Desactiva el cierre con la tecla Esc
-			closeOnClickOutside: false // Desactiva el cierre al hacer clic fuera
-		});	 
-		return false;	
-  }else{	
-   if ( fecha <= fecha_actual){  
-	$.ajax({
-      type:'POST',
-	  url:url,
-	  data:'id='+id,
-	  success: function(registro){
-		 if(registro == 1){
-			swal({
-				title: "Success", 
-				text: "Registro eliminado correctamente",
-				icon: "success", 
-				timer: 3000, //timeOut for auto-close
-				closeOnEsc: false, // Desactiva el cierre con la tecla Esc
-				closeOnClickOutside: false // Desactiva el cierre al hacer clic fuera				
-			});	
-			$('#ModalAdd').modal('hide');
-			pagination_transito(1);
-		 }else{	 
-			swal({
-				title: "Error", 
-				text: "Error al Eliminar el Registro",
-				icon: "error", 
-				dangerMode: true,
-				closeOnEsc: false, // Desactiva el cierre con la tecla Esc
-				closeOnClickOutside: false // Desactiva el cierre al hacer clic fuera	
-			});				 
-		 }		 
-		 return false;
-  	  }
-	});
-	}else{
-		swal({
-			title: "Error", 
-			text: "No se puede agregar/modificar registros fuera de esta fecha",
-			icon: "error", 
-			dangerMode: true,
-			closeOnEsc: false, // Desactiva el cierre con la tecla Esc
-			closeOnClickOutside: false // Desactiva el cierre al hacer clic fuera	
-		});		   
-	   return false;		
-	}
-   }
+    fecha_actual = convertDate(hoy);
+
+    if(getMes(fecha)==2){
+      swal({
+        title: "Error",
+        text: "No se puede agregar/modificar registros fuera de este periodo",
+        icon: "error",
+        dangerMode: true,
+        closeOnEsc: false,
+        closeOnClickOutside: false
+      });
+      return false;
+    }else{
+      if ( fecha <= fecha_actual){
+        $.ajax({
+          type:'POST',
+          url:url,
+          data:'id='+id,
+          success: function(registro){
+            if(registro == 1){
+              swal({
+                title: "Success",
+                text: "Registro eliminado correctamente",
+                icon: "success",
+                timer: 3000,
+                closeOnEsc: false,
+                closeOnClickOutside: false
+              });
+              $('#ModalAdd').modal('hide');
+              if (typeof pagination_transito === "function") pagination_transito(1);
+            }else{
+              swal({
+                title: "Error",
+                text: "Error al Eliminar el Registro",
+                icon: "error",
+                dangerMode: true,
+                closeOnEsc: false,
+                closeOnClickOutside: false
+              });
+            }
+            return false;
+          },
+          error: function(xhr){
+            console.error("eliminarTransitoRecibida() AJAX error:", xhr.status, xhr.responseText);
+          }
+        });
+      }else{
+        swal({
+          title: "Error",
+          text: "No se puede agregar/modificar registros fuera de esta fecha",
+          icon: "error",
+          dangerMode: true,
+          closeOnEsc: false,
+          closeOnClickOutside: false
+        });
+        return false;
+      }
+    }
   }else{
-		swal({
-			title: "Acceso Denegado", 
-			text: "No tiene permisos para ejecutar esta acción",
-			icon: "error", 
-			dangerMode: true,
-			closeOnEsc: false, // Desactiva el cierre con la tecla Esc
-			closeOnClickOutside: false // Desactiva el cierre al hacer clic fuera	
-		});
+    swal({
+      title: "Acceso Denegado",
+      text: "No tiene permisos para ejecutar esta acción",
+      icon: "error",
+      dangerMode: true,
+      closeOnEsc: false,
+      closeOnClickOutside: false
+    });
   }
 }
 
 function eliminarTransitoEnviada(){
-  if (getUsuarioSistema() == 1 || getUsuarioSistema() == 2 || getUsuarioSistema() == 5){	
-	var url = '<?php echo SERVERURL; ?>php/reportes_transito/eliminarTransitoEnviada.php';
-	var id = $('#eliminar_transito_enviada #dato').val();
-		
-	var fecha = getFechaRegistroTransitoEnviada(id);
-	
+  if (getUsuarioSistema() == 1 || getUsuarioSistema() == 2 || getUsuarioSistema() == 5){
+    var url = '<?php echo SERVERURL; ?>php/reportes_transito/eliminarTransitoEnviada.php';
+    var id = $('#eliminar_transito_enviada #dato').val();
+
+    var fecha = getFechaRegistroTransitoEnviada(id);
+
     var hoy = new Date();
-    fecha_actual = convertDate(hoy);		
-	
-  if(getMes(fecha)==2){
-		swal({
-			title: "Error", 
-			text: "No se puede agregar/modificar registros fuera de esta fecha",
-			icon: "error", 
-			dangerMode: true,
-			closeOnEsc: false, // Desactiva el cierre con la tecla Esc
-			closeOnClickOutside: false // Desactiva el cierre al hacer clic fuera	
-		});		 
-	 return false;	
-  }else{	
-   if ( fecha <= fecha_actual){  
-	$.ajax({
-      type:'POST',
-	  url:url,
-	  data:'id='+id,
-	  success: function(registro){
-		 if(registro == 1){
-			swal({
-				title: "Success", 
-				text: "Registro eliminado correctamente",
-				icon: "success",
-				timer: 3000, //timeOut for auto-close
-				closeOnEsc: false, // Desactiva el cierre con la tecla Esc
-				closeOnClickOutside: false // Desactiva el cierre al hacer clic fuera					
-			});			 
-			pagination_transito(1);
-		 }else{
-			swal({
-				title: "Error", 
-				text: "Error al Eliminar el Registro",
-				icon: "error", 
-				dangerMode: true,
-				closeOnEsc: false, // Desactiva el cierre con la tecla Esc
-				closeOnClickOutside: false // Desactiva el cierre al hacer clic fuera	
-			});				 
-		 }		 
-		 return false;
-  	  }
-	});
-	}else{	
-		swal({
-			title: "Error", 
-			text: "No se puede agregar/modificar registros fuera de este periodo",
-			icon: "error", 
-			dangerMode: true,
-			closeOnEsc: false, // Desactiva el cierre con la tecla Esc
-			closeOnClickOutside: false // Desactiva el cierre al hacer clic fuera	
-		});			
-	    return false;		
-	}
-   }
+    fecha_actual = convertDate(hoy);
+
+    if(getMes(fecha)==2){
+      swal({
+        title: "Error",
+        text: "No se puede agregar/modificar registros fuera de esta fecha",
+        icon: "error",
+        dangerMode: true,
+        closeOnEsc: false,
+        closeOnClickOutside: false
+      });
+      return false;
+    }else{
+      if ( fecha <= fecha_actual){
+        $.ajax({
+          type:'POST',
+          url:url,
+          data:'id='+id,
+          success: function(registro){
+            if(registro == 1){
+              swal({
+                title: "Success",
+                text: "Registro eliminado correctamente",
+                icon: "success",
+                timer: 3000,
+                closeOnEsc: false,
+                closeOnClickOutside: false
+              });
+              if (typeof pagination_transito === "function") pagination_transito(1);
+            }else{
+              swal({
+                title: "Error",
+                text: "Error al Eliminar el Registro",
+                icon: "error",
+                dangerMode: true,
+                closeOnEsc: false,
+                closeOnClickOutside: false
+              });
+            }
+            return false;
+          },
+          error: function(xhr){
+            console.error("eliminarTransitoEnviada() AJAX error:", xhr.status, xhr.responseText);
+          }
+        });
+      }else{
+        swal({
+          title: "Error",
+          text: "No se puede agregar/modificar registros fuera de este periodo",
+          icon: "error",
+          dangerMode: true,
+          closeOnEsc: false,
+          closeOnClickOutside: false
+        });
+        return false;
+      }
+    }
   }else{
-		swal({
-			title: "Acceso Denegado", 
-			text: "No tiene permisos para ejecutar esta acción",
-			icon: "error", 
-			dangerMode: true,
-			closeOnEsc: false, // Desactiva el cierre con la tecla Esc
-			closeOnClickOutside: false // Desactiva el cierre al hacer clic fuera	
-		});
+    swal({
+      title: "Acceso Denegado",
+      text: "No tiene permisos para ejecutar esta acción",
+      icon: "error",
+      dangerMode: true,
+      closeOnEsc: false,
+      closeOnClickOutside: false
+    });
   }
 }
 
@@ -335,101 +393,115 @@ function convertDate(inputFormat) {
 }
 
 function getMes(fecha){
-    var url = '<?php echo SERVERURL; ?>php/atas/getMes.php';
-	var resp;
-	
-	$.ajax({
-	    type:'POST',
-		data:'fecha='+fecha,
-		url:url,
-		async: false,
-		success:function(data){	
-          resp = data;			  		  		  			  
-		}
-	});
-	return resp	;	
+  var url = '<?php echo SERVERURL; ?>php/atas/getMes.php';
+  var resp;
+
+  $.ajax({
+    type:'POST',
+    data:'fecha='+fecha,
+    url:url,
+    async: false,
+    success:function(data){
+      resp = data;
+    },
+    error: function(xhr){
+      console.error("getMes() AJAX error:", xhr.status, xhr.responseText);
+    }
+  });
+  return resp;
 }
 
 function getFechaRegistroTransitoRecibida(transito_id){
-    var url = '<?php echo SERVERURL; ?>php/reportes_transito/getFechaTransitoRecibida.php';
-	var fecha;
-	$.ajax({
-	    type:'POST',
-		url:url,
-		data:'transito_id='+transito_id,
-		async: false,
-		success:function(data){	
-          fecha = data;			  		  		  			  
-		}
-	});
-	return fecha;
+  var url = '<?php echo SERVERURL; ?>php/reportes_transito/getFechaTransitoRecibida.php';
+  var fecha;
+
+  $.ajax({
+    type:'POST',
+    url:url,
+    data:'transito_id='+transito_id,
+    async: false,
+    success:function(data){
+      fecha = data;
+    },
+    error: function(xhr){
+      console.error("getFechaRegistroTransitoRecibida() AJAX error:", xhr.status, xhr.responseText);
+    }
+  });
+  return fecha;
 }
 
 function getFechaRegistroTransitoEnviada(transito_id){
-    var url = '<?php echo SERVERURL; ?>php/reportes_transito/getFechaTransitoEnviada.php';
-	var fecha;
-	$.ajax({
-	    type:'POST',
-		url:url,
-		data:'transito_id='+transito_id,
-		async: false,
-		success:function(data){	
-          fecha = data;			  		  		  			  
-		}
-	});
-	return fecha;	
+  var url = '<?php echo SERVERURL; ?>php/reportes_transito/getFechaTransitoEnviada.php';
+  var fecha;
+
+  $.ajax({
+    type:'POST',
+    url:url,
+    data:'transito_id='+transito_id,
+    async: false,
+    success:function(data){
+      fecha = data;
+    },
+    error: function(xhr){
+      console.error("getFechaRegistroTransitoEnviada() AJAX error:", xhr.status, xhr.responseText);
+    }
+  });
+  return fecha;
 }
 
-function consultarNombre(id){	
-    var url = '<?php echo SERVERURL; ?>php/reporte_hospitalizacion/getNombre.php';
-	var resp;
-		
-	$.ajax({
-	    type:'POST',
-		url:url,
-		data:'id='+id,
-		async: false,
-		success:function(data){	
-          resp = data;			  		  		  			  
-		}
-	});
-	return resp;		
+function consultarNombre(id){
+  var url = '<?php echo SERVERURL; ?>php/reporte_hospitalizacion/getNombre.php';
+  var resp;
+
+  $.ajax({
+    type:'POST',
+    url:url,
+    data:'id='+id,
+    async: false,
+    success:function(data){
+      resp = data;
+    },
+    error: function(xhr){
+      console.error("consultarNombre() AJAX error:", xhr.status, xhr.responseText);
+    }
+  });
+  return resp;
 }
 
 $('#form_main #reporte_excel').on('click', function(e){
- if (getUsuarioSistema() == 1 || getUsuarioSistema() == 2 || getUsuarioSistema() == 5){
+  if (getUsuarioSistema() == 1 || getUsuarioSistema() == 2 || getUsuarioSistema() == 5){
     e.preventDefault();
     reporteEXCEL();
- }else{
-	swal({
-		title: "Acceso Denegado", 
-		text: "No tiene permisos para ejecutar esta acción",
-		icon: "error", 
-		dangerMode: true,
-		closeOnEsc: false, // Desactiva el cierre con la tecla Esc
-		closeOnClickOutside: false // Desactiva el cierre al hacer clic fuera	
-	});					 
- }
+  }else{
+    swal({
+      title: "Acceso Denegado",
+      text: "No tiene permisos para ejecutar esta acción",
+      icon: "error",
+      dangerMode: true,
+      closeOnEsc: false,
+      closeOnClickOutside: false
+    });
+  }
 });
 
-$('#form_main #reporte_diario').on('click', function(e){ // add event submit We don't want this to act as a link so cancel the link action
- if (getUsuarioSistema() == 1 || getUsuarioSistema() == 2 || getUsuarioSistema() == 5){
-	 e.preventDefault();
-	 reporteEXCELDiario();
- }else{
-	swal({
-		title: "Acceso Denegado", 
-		text: "No tiene permisos para ejecutar esta acción",
-		icon: "error", 
-		dangerMode: true,
-		closeOnEsc: false, // Desactiva el cierre con la tecla Esc
-		closeOnClickOutside: false // Desactiva el cierre al hacer clic fuera	
-	});					 
- }		 
+$('#form_main #reporte_diario').on('click', function(e){
+  if (getUsuarioSistema() == 1 || getUsuarioSistema() == 2 || getUsuarioSistema() == 5){
+    e.preventDefault();
+    reporteEXCELDiario();
+  }else{
+    swal({
+      title: "Acceso Denegado",
+      text: "No tiene permisos para ejecutar esta acción",
+      icon: "error",
+      dangerMode: true,
+      closeOnEsc: false,
+      closeOnClickOutside: false
+    });
+  }
 });
 
 $('#form_main #limpiar').on('click', function(e){
-    e.preventDefault();
-    limpiar();
+  e.preventDefault();
+  limpiar();
 });
 </script>
