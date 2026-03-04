@@ -5,8 +5,8 @@ include '../funtions.php';
 // CONEXION A DB
 $mysqli = connect_mysqli();
 
-$nombre = cleanStringStrtolower($_POST['name']);
-$apellido = cleanStringStrtolower($_POST['lastname']);
+$nombre = cleanString($_POST['name']);
+$apellido = cleanString($_POST['lastname']);
 $sexo = $_POST['sexo'];
 $telefono1 = $_POST['telefono1'];
 $telefono2 = $_POST['telefono2'];
@@ -66,7 +66,7 @@ if (isset($_POST['referido_id'])) {  // COMPRUEBO SI LA VARIABLE ESTA DIFINIDA
 	$referido_id = 0;
 }
 
-$localidad = cleanStringStrtolower($_POST['direccion']);
+$localidad = cleanString($_POST['direccion']);
 $religion_id = 0;
 $profesion_id = 0;
 $identidad = $_POST['identidad'];

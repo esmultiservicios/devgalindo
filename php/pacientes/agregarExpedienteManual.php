@@ -6,8 +6,8 @@ include "../funtions.php";
 $mysqli = connect_mysqli();
 
 $pacientes_id = $_POST['pacientes_id'];
-$expediente = cleanStringStrtolower($_POST['expediente_usuario_manual']);
-$identidad = cleanStringStrtolower($_POST['identidad_ususario_manual']);
+$expediente = cleanString($_POST['expediente_usuario_manual']);
+$identidad = cleanString($_POST['identidad_ususario_manual']);
 $usuario = $_SESSION['colaborador_id'];
 $estado = 1; //1. Activo 2. Inactivo
 $fecha_registro = date("Y-m-d H:i:s");

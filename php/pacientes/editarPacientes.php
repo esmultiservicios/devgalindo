@@ -70,7 +70,7 @@ if(isset($_POST['referido_id'])){//COMPRUEBO SI LA VARIABLE ESTA DIFINIDA
 }
 
 $correo = strtolower(cleanString($_POST['correo']));
-$localidad = cleanStringStrtolower($_POST['direccion']);
+$localidad = cleanString($_POST['direccion']);
 
 $update = "UPDATE pacientes 
 	SET 

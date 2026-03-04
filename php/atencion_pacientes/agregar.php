@@ -20,35 +20,35 @@ $servicio_id = $_POST['servicio_id'];
 
 $num_hijos = isset($_POST['num_hijos']) && $_POST['num_hijos'] !== '' ? intval($_POST['num_hijos']) : 0;
 
-$localidad = cleanStringStrtolower($_POST['procedencia']);
+$localidad = cleanString($_POST['procedencia']);
 
 $identidad = $_POST['identidad'];
 $fecha_nac = $_POST['fecha_nac'];
 $telefono1 = $_POST['telefono1'];
 
-$red_apoyo = cleanStringStrtolower($_POST['red_apoyo']);
-$terapeuta_actual = cleanStringStrtolower($_POST['terapeuta_actual']);
+$red_apoyo = cleanString($_POST['red_apoyo']);
+$terapeuta_actual = cleanString($_POST['terapeuta_actual']);
 
-$antecedentes_medicos_no_psiquiatricos = cleanStringStrtolower($_POST['antecedentes_medicos_no_psiquiatricos']);
-$hospitalizaciones = cleanStringStrtolower($_POST['hospitalizaciones']);
-$cirugias = cleanStringStrtolower($_POST['cirugias']);
-$alergias = cleanStringStrtolower($_POST['alergias']);
-$antecedentes_medicos_psiquiatricos = cleanStringStrtolower($_POST['antecedentes_medicos_psiquiatricos']);
-$historia_gineco_obstetrica = cleanStringStrtolower($_POST['historia_gineco_obstetrica']);
-$medicamentos_previos = cleanStringStrtolower($_POST['medicamentos_previos']);
-$medicamentos_actuales = cleanStringStrtolower($_POST['medicamentos_actuales']);
-$legal = cleanStringStrtolower($_POST['legal']);
-$sustancias = cleanStringStrtolower($_POST['sustancias']);
-$rasgos_personalidad = cleanStringStrtolower($_POST['rasgos_personalidad']);
-$informacion_adicional = cleanStringStrtolower($_POST['informacion_adicional']);
-$pendientes = cleanStringStrtolower($_POST['pendientes']);
-$diagnostico = cleanStringStrtolower($_POST['diagnostico']);
-$seguimiento = cleanStringStrtolower($_POST['seguimiento']);
+$antecedentes_medicos_no_psiquiatricos = cleanString($_POST['antecedentes_medicos_no_psiquiatricos']);
+$hospitalizaciones = cleanString($_POST['hospitalizaciones']);
+$cirugias = cleanString($_POST['cirugias']);
+$alergias = cleanString($_POST['alergias']);
+$antecedentes_medicos_psiquiatricos = cleanString($_POST['antecedentes_medicos_psiquiatricos']);
+$historia_gineco_obstetrica = cleanString($_POST['historia_gineco_obstetrica']);
+$medicamentos_previos = cleanString($_POST['medicamentos_previos']);
+$medicamentos_actuales = cleanString($_POST['medicamentos_actuales']);
+$legal = cleanString($_POST['legal']);
+$sustancias = cleanString($_POST['sustancias']);
+$rasgos_personalidad = cleanString($_POST['rasgos_personalidad']);
+$informacion_adicional = cleanString($_POST['informacion_adicional']);
+$pendientes = cleanString($_POST['pendientes']);
+$diagnostico = cleanString($_POST['diagnostico']);
+$seguimiento = cleanString($_POST['seguimiento']);
 
-$religion = cleanStringStrtolower($_POST['religion_id']);
-$profesion = cleanStringStrtolower($_POST['profesion']);
-$estado_civil = cleanStringStrtolower($_POST['estado_civil']);
-$escolaridad = cleanStringStrtolower($_POST['escolaridad']);
+$religion = cleanString($_POST['religion_id']);
+$profesion = cleanString($_POST['profesion']);
+$estado_civil = cleanString($_POST['estado_civil']);
+$escolaridad = cleanString($_POST['escolaridad']);
 
 /* ############################################################################################################################################################################################## */
 // ACTUALIZAMOS LOS DATOS DEL PACIENTE
