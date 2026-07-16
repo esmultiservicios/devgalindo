@@ -205,8 +205,8 @@
                 <div class="form-row">
                     <div class="col-md-12 mb-3">
                         <label for="procedencia">Dirección</label>
-                        <input type="text" name="procedencia" id="procedencia" placeholder="Dirección" readonly
-                            class="form-control" />
+                        <input type="text" name="procedencia" id="procedencia" placeholder="Dirección"
+                            class="form-control" maxlength="255" />
                     </div>
                 </div>
                 </section>
