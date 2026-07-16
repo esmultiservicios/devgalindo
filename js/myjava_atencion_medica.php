@@ -84,6 +84,103 @@
     pacientesHtml: null
   };
 
+  var servicioAtencionPendiente = null;
+
+  function obtenerPrimerServicioDisponible($select) {
+    var valor = '';
+
+    $select.find('option').each(function () {
+      var opcionValor = $(this).val();
+
+      if (opcionValor !== null && String(opcionValor).trim() !== '') {
+        valor = opcionValor;
+        return false;
+      }
+    });
+
+    return valor;
+  }
+
+  function seleccionarServicioAtencion(servicioPreferido) {
+    var $select = $('#formulario_atenciones #servicio_id');
+
+    if (!$select.length) {
+      return '';
+    }
+
+    var valorSeleccionar = servicioPreferido;
+
+    if (
+      valorSeleccionar === null ||
+      typeof valorSeleccionar === 'undefined' ||
+      String(valorSeleccionar).trim() === '' ||
+      !$select.find('option').filter(function () {
+        return String($(this).val()) === String(valorSeleccionar);
+      }).length
+    ) {
+      valorSeleccionar = obtenerPrimerServicioDisponible($select);
+    }
+
+    if (valorSeleccionar === '') {
+      return '';
+    }
+
+    valorSeleccionar = String(valorSeleccionar);
+
+    // Sincronizar el select HTML real.
+    $select.find('option').prop('selected', false);
+
+    var $opcion = $select.find('option').filter(function () {
+      return String($(this).val()) === valorSeleccionar;
+    }).first();
+
+    if (!$opcion.length) {
+      return '';
+    }
+
+    $opcion.prop('selected', true);
+    $select.val(valorSeleccionar);
+    servicioAtencionPendiente = valorSeleccionar;
+
+    // Sincronizar también bootstrap-select. render() solo cambia el texto;
+    // selectpicker('val') cambia el valor real administrado por el plugin.
+    if (typeof $select.selectpicker === 'function') {
+      try {
+        $select.selectpicker('val', valorSeleccionar);
+        $select.selectpicker('render');
+      } catch (error) {
+        console.warn('No se pudo sincronizar el servicio con selectpicker:', error);
+      }
+    }
+
+    $select.trigger('change.servicioAtencion');
+
+    return String($select.val() || valorSeleccionar);
+  }
+
+  function obtenerServicioAtencionParaGuardar() {
+    var $select = $('#formulario_atenciones #servicio_id');
+    var servicio_id = $select.val();
+
+    if (
+      servicio_id === null ||
+      typeof servicio_id === 'undefined' ||
+      String(servicio_id).trim() === ''
+    ) {
+      servicio_id = seleccionarServicioAtencion(servicioAtencionPendiente);
+    }
+
+    if (
+      servicio_id === null ||
+      typeof servicio_id === 'undefined' ||
+      String(servicio_id).trim() === ''
+    ) {
+      servicio_id = seleccionarServicioAtencion(null);
+    }
+
+    return servicio_id ? String(servicio_id) : '';
+  }
+
   function destruirSelectpickerPacienteAtencion() {
     var $select = $('#formulario_atenciones #paciente_consulta');
 
@@ -370,6 +467,8 @@
       window.__SPEECH_STATE__.activeCampo = null;
     }
 
+    servicioAtencionPendiente = null;
+
     $('#acciones_atras').addClass('active');
     $('#acciones_factura').removeClass('active');
     $('#label_acciones_factura').html('');
@@ -577,6 +676,10 @@
               $('#formulario_atenciones #fecha').attr('readonly', false);
               $('#formulario_atenciones #paciente_consulta').attr('disabled', false);
               $('#reg_atencion').attr('disabled', false);
+
+              // En una atención nueva siempre se selecciona el primer servicio.
+              servicioAtencionPendiente = null;
+              seleccionarServicioAtencion(null);
             },
             function () {
               $('#formulario_atenciones .nav-tabs li:eq(0) a').tab('show');
@@ -619,7 +722,7 @@
     $(document).off("click.atencion", "#reg_atencion").on("click.atencion", "#reg_atencion", function (e) {
       e.preventDefault();
 
-      let servicio_id = $('#formulario_atenciones #servicio_id').val();
+      let servicio_id = obtenerServicioAtencionParaGuardar();
 
       if (!servicio_id) {
         swal({
@@ -634,7 +737,15 @@
       }
 
       let url = '<?php echo SERVERURL; ?>php/atencion_pacientes/agregar.php';
+
+      $('#formulario_atenciones #servicio_id').val(servicio_id);
+      $('#formulario_atenciones #servicio_id option').prop('selected', false);
+      $('#formulario_atenciones #servicio_id option').filter(function () {
+        return String($(this).val()) === String(servicio_id);
+      }).prop('selected', true);
+
       let formData = new FormData($('#formulario_atenciones')[0]);
+      formData.set('servicio_id', servicio_id);
 
       $.ajax({
         type: 'POST',
@@ -687,7 +798,7 @@
     $(document).off("click.atencion", "#edi_atencion").on("click.atencion", "#edi_atencion", function (e) {
       e.preventDefault();
 
-      let servicio_id = $('#formulario_atenciones #servicio_id').val();
+      let servicio_id = obtenerServicioAtencionParaGuardar();
 
       if (!servicio_id) {
         swal({
@@ -702,7 +813,15 @@
       }
 
       let url = '<?php echo SERVERURL; ?>php/atencion_pacientes/agregarRegistro.php';
+
+      $('#formulario_atenciones #servicio_id').val(servicio_id);
+      $('#formulario_atenciones #servicio_id option').prop('selected', false);
+      $('#formulario_atenciones #servicio_id option').filter(function () {
+        return String($(this).val()) === String(servicio_id);
+      }).prop('selected', true);
+
       let formData = new FormData($('#formulario_atenciones')[0]);
+      formData.set('servicio_id', servicio_id);
 
       $.ajax({
         type: 'POST',
@@ -1493,7 +1612,11 @@
               $('#formulario_atenciones #profesion_id').val(array[5]);
               $('#formulario_atenciones #estado_civil').val(array[15]);
               $('#formulario_atenciones #escolaridad').val(array[17]);
-              $('#formulario_atenciones #servicio_id').val(array[14]);
+
+              // Desde paginar se respeta el servicio de la agenda.
+              // Si viene vacío o ya no existe, se usa el primero disponible.
+              servicioAtencionPendiente = array[14];
+              seleccionarServicioAtencion(servicioAtencionPendiente);
             },
             function () {
               $('#formulario_atenciones #fecha').val(array[7]);
@@ -1550,6 +1673,9 @@
               '#formulario_atenciones #estado_civil',
               '#formulario_atenciones #escolaridad'
             ], function () {
+              // Reforzar la selección después de renderizar los catálogos.
+              seleccionarServicioAtencion(servicioAtencionPendiente);
+
               // En edición desde agenda no hace falta cargar todos los pacientes.
               // Se crea un select con únicamente el paciente actual.
               prepararPacienteUnicoAtencion(array[6], array[1]);
@@ -2513,7 +2639,18 @@ window.inicializarSpeechRecognition = function (limites) {
         var $select = $('#formulario_atenciones #servicio_id');
 
         $select.html(data);
-        refrescarSelectSinBloquear($select);
+
+        window.requestAnimationFrame(function () {
+          if (typeof $select.selectpicker === 'function') {
+            $select.selectpicker('refresh');
+          }
+
+          // Si editarRegistro dejó un servicio pendiente, se respeta.
+          // En una atención nueva, se selecciona automáticamente el primero.
+          window.requestAnimationFrame(function () {
+            seleccionarServicioAtencion(servicioAtencionPendiente);
+          });
+        });
       },
       error: function (xhr, textStatus, errorThrown) {
         console.error(
@@ -2521,9 +2658,13 @@ window.inicializarSpeechRecognition = function (limites) {
           xhr.responseText || errorThrown || textStatus
         );
 
-        $('#formulario_atenciones #servicio_id')
-          .html('<option value="">No se pudo cargar Consultorio</option>')
-          .selectpicker('refresh');
+        var $select = $('#formulario_atenciones #servicio_id');
+
+        $select.html('<option value="">No se pudo cargar Consultorio</option>');
+
+        if (typeof $select.selectpicker === 'function') {
+          $select.selectpicker('refresh');
+        }
       }
     });
   };
