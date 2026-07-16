@@ -35,6 +35,36 @@
         border-bottom: 1px solid #e9ecef;
     }
 
+    #atencionMedica #seccion_datos_paciente {
+        margin-bottom: 1.25rem;
+    }
+
+    #atencionMedica #seccion_datos_paciente .titulo-seccion-atencion {
+        margin-bottom: 0.65rem;
+        padding: 0.65rem 0.85rem;
+    }
+
+    #atencionMedica #seccion_datos_paciente .form-row {
+        margin-bottom: 0;
+    }
+
+    #atencionMedica #seccion_datos_paciente [class*="col-"] {
+        margin-bottom: 0.55rem !important;
+    }
+
+    #atencionMedica #seccion_datos_paciente label {
+        margin-bottom: 0.25rem;
+    }
+
+    #atencionMedica #seccion_datos_paciente .input-group {
+        margin-bottom: 0 !important;
+    }
+
+    #atencionMedica #seccion_datos_paciente .form-control,
+    #atencionMedica #seccion_datos_paciente .bootstrap-select > .dropdown-toggle {
+        min-height: 38px;
+    }
+
     @media (max-width: 767.98px) {
         #atencionMedica .sticky-buttons {
             position: static;
@@ -99,11 +129,8 @@
                     </div>
                     <div class="col-md-3 mb-3">
                         <label for="religion_id">Religión</label>
-                        <div class="input-group mb-3">
-                            <select class="selectpicker" id="religion_id" name="religion_id" data-live-search="true"
-                                title="Religión" data-width="100%" data-size="7">
-                            </select>
-                        </div>
+                        <input type="text" id="religion_id" name="religion_id"
+                            placeholder="Religión" class="form-control" maxlength="100" />
                     </div>
                 </div>
 
@@ -130,24 +157,18 @@
                                 placeholder="Identidad o RTN">
                         </div>
                     </div>
+                    <div class="col-md-3 mb-3">
+                        <label for="estado_civil">Estado Civil</label>
+                        <input type="text" id="estado_civil" name="estado_civil"
+                            placeholder="Estado Civil" class="form-control" maxlength="100" />
+                    </div>
                 </div>
 
                 <div class="form-row">
                     <div class="col-md-3 mb-3">
-                        <label for="estado_civil">Estado Civil</label>
-                        <div class="input-group mb-3">
-                            <select class="selectpicker" id="estado_civil" name="estado_civil" data-live-search="true"
-                                title="Estado Civil" data-width="100%" data-size="7">
-                            </select>
-                        </div>
-                    </div>
-                    <div class="col-md-3 mb-3">
                         <label for="profesion_id">Profesión</label>
-                        <div class="input-group mb-3">
-                            <select class="selectpicker" id="profesion_id" name="profesion_id" data-live-search="true"
-                                title="Profesión" data-width="100%" data-size="7">
-                            </select>
-                        </div>
+                        <input type="text" id="profesion_id" name="profesion_id"
+                            placeholder="Profesión" class="form-control" maxlength="150" />
                     </div>
                     <div class="col-md-3 mb-3">
                         <label for="num_hijos">Número de Hijos</label>
@@ -166,11 +187,8 @@
                 <div class="form-row">
                     <div class="col-md-3 mb-3">
                         <label for="escolaridad">Escolaridad</label>
-                        <div class="input-group mb-3">
-                            <select class="selectpicker" id="escolaridad" name="escolaridad" data-live-search="true"
-                                title="Escolaridad" data-width="100%" data-size="7">
-                            </select>
-                        </div>
+                        <input type="text" id="escolaridad" name="escolaridad"
+                            placeholder="Escolaridad" class="form-control" maxlength="100" />
                     </div>
                     <div class="col-md-3 mb-3">
                         <label for="red_apoyo">Red de Apoyo</label>
