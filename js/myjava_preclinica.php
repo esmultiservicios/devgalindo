@@ -12,11 +12,63 @@ function parseJsonSeguro(data, contexto) {
     }
 }
 
+
+var peticionPaginacion = null;
+var temporizadorBusqueda = null;
+var catalogosPreclinicaCargados = false;
+var cargandoCatalogosPreclinica = false;
+
+function solicitarPaginacion(partida, espera) {
+    clearTimeout(temporizadorBusqueda);
+
+    temporizadorBusqueda = setTimeout(function() {
+        pagination(partida || 1);
+    }, typeof espera === 'number' ? espera : 250);
+}
+
+function refrescarSelectPicker($select) {
+    window.requestAnimationFrame(function() {
+        if ($select.length && typeof $select.selectpicker === 'function') {
+            $select.selectpicker('refresh');
+        }
+    });
+}
+
+function usuarioConPermisoPreclinica() {
+    var usuario = Number(getUsuarioSistema());
+    return usuario === 1 || usuario === 2 || usuario === 5 || usuario === 6;
+}
+
+function cargarCatalogosModalPreclinica(forzar) {
+    if (cargandoCatalogosPreclinica) {
+        return;
+    }
+
+    if (catalogosPreclinicaCargados && forzar !== true) {
+        return;
+    }
+
+    cargandoCatalogosPreclinica = true;
+
+    var $servicio = $('#formulario_agregar_preclinica #servicio');
+    var $medico = $('#formulario_agregar_preclinica #medico');
+
+    $servicio.html('<option value="">Cargando servicios...</option>');
+    $medico.html('<option value="">Cargando profesionales...</option>');
+    refrescarSelectPicker($servicio);
+    refrescarSelectPicker($medico);
+
+    $.when(getServicio(), getColaborador())
+        .always(function() {
+            cargandoCatalogosPreclinica = false;
+            catalogosPreclinicaCargados = true;
+        });
+}
+
 $(document).ready(function() {
     $('#form_main #nuevo_registro').on('click', function(e) {
         e.preventDefault();
-        if (getUsuarioSistema() == 1 || getUsuarioSistema() == 2 || getUsuarioSistema() == 5 ||
-            getUsuarioSistema() == 6) {
+        if (usuarioConPermisoPreclinica()) {
             $('#reg_preclinica').show();
             $('#edit_preclinica').hide();
             $('#formulario_agregar_preclinica')[0].reset();
@@ -34,19 +86,24 @@ $(document).ready(function() {
             $('#formulario_agregar_preclinica #group_alta').show();
             $('#formulario_agregar_preclinica #grupo_profesional_consulta').hide();
             $('#formulario_agregar_preclinica #visita').show();
-            limpiarFormulario();
-
             $('#formulario_agregar_preclinica').attr({
                 'data-form': 'save'
             });
             $('#formulario_agregar_preclinica').attr({
                 'action': '<?php echo SERVERURL; ?>php/preclinica/agregarPreclinica.php'
             });
-            $('#agregar_preclinica').modal({
-                show: true,
-                keyboard: false,
-                backdrop: 'static'
-            });
+            $('#agregar_preclinica')
+                .one('shown.bs.modal.preclinicaCarga', function() {
+                    setTimeout(function() {
+                        cargarCatalogosModalPreclinica(false);
+                    }, 0);
+                })
+                .modal({
+                    show: true,
+                    keyboard: false,
+                    backdrop: 'static'
+                });
+
             return false;
         } else {
             swal({
@@ -82,13 +139,11 @@ $(document).ready(function() {
         pagination(1);
     });
 
-    limpiarFormulario();
 });
 
 $('#form_ausencia #Si').on('click', function(
     e) { // add event submit We don't want this to act as a link so cancel the link action
-    if (getUsuarioSistema() == 1 || getUsuarioSistema() == 2 || getUsuarioSistema() == 5 ||
-        getUsuarioSistema() == 6) {
+    if (usuarioConPermisoPreclinica()) {
         e.preventDefault();
         if ($('#form_ausencia #motivo_ausencia').val() != "") {
             eliminarRegistro();
@@ -311,22 +366,35 @@ function limpiarFormularioMain() {
 }
 
 function limpiarFormulario() {
-    getServicio();
-    getColaborador();
+    return $.when(
+        getServicio(),
+        getColaborador()
+    );
 }
 
 //Consultar Servicio
 function getServicio() {
     var url = '<?php echo SERVERURL; ?>php/preclinica/servicios.php';
+    var $select = $('#formulario_agregar_preclinica #servicio');
 
-    $.ajax({
-        type: "POST",
+    return $.ajax({
+        type: 'POST',
         url: url,
-        async: true,
+        dataType: 'html',
+        cache: false,
+        timeout: 30000,
         success: function(data) {
-            $('#formulario_agregar_preclinica #servicio').html("");
-            $('#formulario_agregar_preclinica #servicio').html(data);
-            $('#formulario_agregar_preclinica #servicio').selectpicker('refresh');
+            $select.html(data);
+            refrescarSelectPicker($select);
+        },
+        error: function(xhr, textStatus, errorThrown) {
+            console.error(
+                'No se pudieron cargar los servicios:',
+                xhr.responseText || errorThrown || textStatus
+            );
+
+            $select.html('<option value="">No se pudieron cargar los servicios</option>');
+            refrescarSelectPicker($select);
         }
     });
 }
@@ -381,7 +449,7 @@ $(document).ready(function() {
 /*************************************************/
 //FORMULARIOS
 function editarRegistro(agenda_id, expediente) {
-    if (getUsuarioSistema() == 1 || getUsuarioSistema() == 2 || getUsuarioSistema() == 5 || getUsuarioSistema() == 6) {
+    if (usuarioConPermisoPreclinica()) {
         if (expediente != 0) {
             var url = '<?php echo SERVERURL; ?>php/preclinica/editar.php';
 
@@ -420,11 +488,17 @@ function editarRegistro(agenda_id, expediente) {
                         'action': '<?php echo SERVERURL; ?>php/preclinica/agregarPreclinicaporUsuario.php'
                     });
 
-                    $('#agregar_preclinica').modal({
-                        show: true,
-                        keyboard: false,
-                        backdrop: 'static'
-                    });
+                    $('#agregar_preclinica')
+                        .one('shown.bs.modal.preclinicaEdicion', function() {
+                            setTimeout(function() {
+                                cargarCatalogosModalPreclinica(false);
+                            }, 0);
+                        })
+                        .modal({
+                            show: true,
+                            keyboard: false,
+                            backdrop: 'static'
+                        });
                     return false;
                 }
             });
@@ -459,135 +533,186 @@ function convertDate(inputFormat) {
 }
 
 function nosePresentoRegistro(id, pacientes_id) {
-    if (getUsuarioSistema() == 1 || getUsuarioSistema() == 2 || getUsuarioSistema() == 5 || getUsuarioSistema() == 6) {
-        var nombre_usuario = consultarNombre(pacientes_id);
-        var expediente_usuario = consultarExpediente(pacientes_id);
-        var dato;
+    if (!usuarioConPermisoPreclinica()) {
+        swal({
+            title: 'Acceso Denegado',
+            text: 'No tiene permisos para ejecutar esta acción',
+            icon: 'error',
+            dangerMode: true,
+            closeOnEsc: false,
+            closeOnClickOutside: false
+        });
+        return false;
+    }
 
-        if (expediente_usuario == 0) {
-            dato = nombre_usuario;
-        } else {
-            dato = nombre_usuario + " (Expediente: " + expediente_usuario + ")";
-        }
+    $.when(
+        consultarNombre(pacientes_id),
+        consultarExpediente(pacientes_id)
+    ).done(function(nombreRespuesta, expedienteRespuesta) {
+        var nombreUsuario = Array.isArray(nombreRespuesta) ? nombreRespuesta[0] : nombreRespuesta;
+        var expedienteUsuario = Array.isArray(expedienteRespuesta) ? expedienteRespuesta[0] : expedienteRespuesta;
+        var dato = Number(expedienteUsuario) === 0
+            ? nombreUsuario
+            : nombreUsuario + ' (Expediente: ' + expedienteUsuario + ')';
 
         swal({
-            title: "¿Esta seguro?",
-            text: "¿Desea remover este usuario: " + dato + " que no se presento a su cita?",
+            title: '¿Está seguro?',
+            text: '¿Desea remover este usuario: ' + dato + ' que no se presentó a su cita?',
             content: {
-                element: "input",
+                element: 'input',
                 attributes: {
-                    placeholder: "Comentario",
-                    type: "text",
-                },
+                    placeholder: 'Comentario',
+                    type: 'text'
+                }
             },
-            icon: "warning",
+            icon: 'warning',
             buttons: {
-                cancel: "Cancelar",
+                cancel: 'Cancelar',
                 confirm: {
-                    text: "¡Sí, remover el usuario!",
-                    closeModal: false,
-                },
+                    text: '¡Sí, remover el usuario!',
+                    closeModal: false
+                }
             },
             dangerMode: true,
-            closeOnEsc: false, // Desactiva el cierre con la tecla Esc
-            closeOnClickOutside: false // Desactiva el cierre al hacer clic fuera            
-        }).then((value) => {
-            if (value === null || value.trim() === "") {
-                swal("¡Necesita escribir algo!", { icon: "error" });
+            closeOnEsc: false,
+            closeOnClickOutside: false
+        }).then(function(value) {
+            if (value === null || $.trim(value) === '') {
+                swal('¡Necesita escribir algo!', { icon: 'error' });
                 return false;
             }
+
             eliminarRegistro(id, value);
         });
-    } else {
+    }).fail(function(xhr) {
+        console.error(xhr && xhr.responseText ? xhr.responseText : 'No se pudo consultar el paciente.');
+
         swal({
-            title: "Acceso Denegado",
-            text: "No tiene permisos para ejecutar esta acción",
-            icon: "error",
+            title: 'Error',
+            text: 'No se pudo consultar la información del paciente.',
+            icon: 'error',
             dangerMode: true,
-            closeOnEsc: false, // Desactiva el cierre con la tecla Esc
-            closeOnClickOutside: false // Desactiva el cierre al hacer clic fuera
+            closeOnEsc: false,
+            closeOnClickOutside: false
         });
-    }
+    });
+
+    return false;
 }
 
 function eliminarRegistro(id, comentario) {
-    var hoy = new Date();
-    fecha_actual = convertDate(hoy);
-
-    var url = '<?php echo SERVERURL; ?>php/agenda_pacientes/usuario_no_presento.php';
+    var fechaActual = convertDate(new Date());
     var fecha = $('#form_main #fecha_i').val();
+    var url = '<?php echo SERVERURL; ?>php/agenda_pacientes/usuario_no_presento.php';
 
-    if (getMes(fecha) == 2) {
-        swal({
-            title: "Acceso Denegado",
-            text: "No se puede agregar/modificar registros fuera de este periodo",
-            icon: "error",
-            dangerMode: true,
-            closeOnEsc: false, // Desactiva el cierre con la tecla Esc
-            closeOnClickOutside: false // Desactiva el cierre al hacer clic fuera
-        });
-        return false;
-    } else {
-        if (fecha <= fecha_actual) {
+    getMes(fecha)
+        .done(function(respuestaMes) {
+            if (Number(respuestaMes) === 2) {
+                swal({
+                    title: 'Acceso Denegado',
+                    text: 'No se puede agregar/modificar registros fuera de este periodo',
+                    icon: 'error',
+                    dangerMode: true,
+                    closeOnEsc: false,
+                    closeOnClickOutside: false
+                });
+                return;
+            }
+
+            if (fecha > fechaActual) {
+                swal({
+                    title: 'Error',
+                    text: 'No se puede ejecutar esta acción fuera de esta fecha',
+                    icon: 'error',
+                    dangerMode: true,
+                    closeOnEsc: false,
+                    closeOnClickOutside: false
+                });
+                return;
+            }
+
             $.ajax({
                 type: 'POST',
                 url: url,
-                data: 'agenda_id=' + id + '&fecha=' + fecha + '&comentario=' + comentario,
+                data: {
+                    agenda_id: id,
+                    fecha: fecha,
+                    comentario: comentario
+                },
+                dataType: 'text',
+                cache: false,
+                timeout: 30000,
                 success: function(registro) {
-                    if (registro == 1) {
+                    registro = Number(registro);
+
+                    if (registro === 1) {
                         swal({
-                            title: "Success",
-                            text: "Registro removido correctamente",
-                            icon: "success",
-                            timer: 3000, //timeOut for auto-close
-                            closeOnEsc: false, // Desactiva el cierre con la tecla Esc
-                            closeOnClickOutside: false // Desactiva el cierre al hacer clic fuera                            
-                        });
-                        pagination(1);
-                    } else if (registro == 3) {
-                        swal({
-                            title: "Error",
-                            text: "Este registro ya tiene almacenada una ausencia",
-                            icon: "error",
-                            dangerMode: true,
-                            closeOnEsc: false, // Desactiva el cierre con la tecla Esc
-                            closeOnClickOutside: false // Desactiva el cierre al hacer clic fuera
+                            title: 'Success',
+                            text: 'Registro removido correctamente',
+                            icon: 'success',
+                            timer: 3000,
+                            closeOnEsc: false,
+                            closeOnClickOutside: false
                         });
 
-                    } else if (registro == 4) {
+                        pagination(1);
+                    } else if (registro === 3) {
                         swal({
-                            title: "Error",
-                            text: "Este usuario ya ha sido precliniado, no puede marcarle una ausencia",
-                            icon: "error",
+                            title: 'Error',
+                            text: 'Este registro ya tiene almacenada una ausencia',
+                            icon: 'error',
                             dangerMode: true,
-                            closeOnEsc: false, // Desactiva el cierre con la tecla Esc
-                            closeOnClickOutside: false // Desactiva el cierre al hacer clic fuera
+                            closeOnEsc: false,
+                            closeOnClickOutside: false
                         });
-                        return false;
+                    } else if (registro === 4) {
+                        swal({
+                            title: 'Error',
+                            text: 'Este usuario ya ha sido precliniado, no puede marcarle una ausencia',
+                            icon: 'error',
+                            dangerMode: true,
+                            closeOnEsc: false,
+                            closeOnClickOutside: false
+                        });
                     } else {
                         swal({
-                            title: "Error",
-                            text: "Error al mover el registro",
-                            icon: "error",
+                            title: 'Error',
+                            text: 'Error al mover el registro',
+                            icon: 'error',
                             dangerMode: true,
-                            closeOnEsc: false, // Desactiva el cierre con la tecla Esc
-                            closeOnClickOutside: false // Desactiva el cierre al hacer clic fuera
+                            closeOnEsc: false,
+                            closeOnClickOutside: false
                         });
                     }
+                },
+                error: function(xhr, textStatus, errorThrown) {
+                    console.error(xhr.responseText || errorThrown || textStatus);
+
+                    swal({
+                        title: 'Error',
+                        text: 'No se pudo procesar la ausencia.',
+                        icon: 'error',
+                        dangerMode: true,
+                        closeOnEsc: false,
+                        closeOnClickOutside: false
+                    });
                 }
             });
-            return false;
-        } else {
+        })
+        .fail(function(xhr) {
+            console.error(xhr && xhr.responseText ? xhr.responseText : 'No se pudo validar el periodo.');
+
             swal({
-                title: "Error",
-                text: "No se puede ejecutar esta acción fuera de esta fecha",
-                icon: "error",
+                title: 'Error',
+                text: 'No se pudo validar el periodo del registro.',
+                icon: 'error',
                 dangerMode: true,
-                closeOnEsc: false, // Desactiva el cierre con la tecla Esc
-                closeOnClickOutside: false // Desactiva el cierre al hacer clic fuera
+                closeOnEsc: false,
+                closeOnClickOutside: false
             });
-        }
-    }
+        });
+
+    return false;
 }
 
 function convertDate(inputFormat) {
@@ -606,18 +731,15 @@ $(document).ready(function() {
 
 function getMes(fecha) {
     var url = '<?php echo SERVERURL; ?>php/preclinica/getMes.php';
-    var resp;
 
-    $.ajax({
+    return $.ajax({
         type: 'POST',
-        data: 'fecha=' + fecha,
         url: url,
-        async: false,
-        success: function(data) {
-            resp = data;
-        }
+        data: { fecha: fecha },
+        dataType: 'text',
+        cache: false,
+        timeout: 30000
     });
-    return resp;
 }
 
 function evaluarRegistrosPendientes() {
@@ -659,50 +781,41 @@ function evaluarRegistrosPendientes() {
 
 function consultarNombre(pacientes_id) {
     var url = '<?php echo SERVERURL; ?>php/pacientes/getNombre.php';
-    var resp;
 
-    $.ajax({
+    return $.ajax({
         type: 'POST',
         url: url,
-        data: 'pacientes_id=' + pacientes_id,
-        async: false,
-        success: function(data) {
-            resp = data;
-        }
+        data: { pacientes_id: pacientes_id },
+        dataType: 'text',
+        cache: false,
+        timeout: 30000
     });
-    return resp;
 }
 
 function consultarExpediente(pacientes_id) {
     var url = '<?php echo SERVERURL; ?>php/pacientes/getExpedienteInformacion.php';
-    var resp;
 
-    $.ajax({
+    return $.ajax({
         type: 'POST',
         url: url,
-        data: 'pacientes_id=' + pacientes_id,
-        async: false,
-        success: function(data) {
-            resp = data;
-        }
+        data: { pacientes_id: pacientes_id },
+        dataType: 'text',
+        cache: false,
+        timeout: 30000
     });
-    return resp;
 }
 
 function getIdentidad(pacientes_id) {
     var url = '<?php echo SERVERURL; ?>php/pacientes/getIdentidad.php';
-    var resp;
 
-    $.ajax({
+    return $.ajax({
         type: 'POST',
         url: url,
-        data: 'pacientes_id=' + pacientes_id,
-        async: false,
-        success: function(data) {
-            resp = data;
-        }
+        data: { pacientes_id: pacientes_id },
+        dataType: 'text',
+        cache: false,
+        timeout: 30000
     });
-    return resp;
 }
 
 $(document).ready(function() {
@@ -725,15 +838,26 @@ function evaluarRegistrosPendientesEmailPreclinica() {
 //INICIO FUNCION PARA OBTENER LOS COLABORADORES
 function getColaborador() {
     var url = '<?php echo SERVERURL; ?>php/citas/getMedico.php';
+    var $select = $('#formulario_agregar_preclinica #medico');
 
-    $.ajax({
-        type: "POST",
+    return $.ajax({
+        type: 'POST',
         url: url,
-        async: true,
+        dataType: 'html',
+        cache: false,
+        timeout: 30000,
         success: function(data) {
-            $('#formulario_agregar_preclinica #medico').html("");
-            $('#formulario_agregar_preclinica #medico').html(data).selectpicker('refresh');
-            $('#formulario_agregar_preclinica #medico').selectpicker('refresh');
+            $select.html(data);
+            refrescarSelectPicker($select);
+        },
+        error: function(xhr, textStatus, errorThrown) {
+            console.error(
+                'No se pudieron cargar los profesionales:',
+                xhr.responseText || errorThrown || textStatus
+            );
+
+            $select.html('<option value="">No se pudieron cargar los profesionales</option>');
+            refrescarSelectPicker($select);
         }
     });
 }

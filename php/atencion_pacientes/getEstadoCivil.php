@@ -12,6 +12,8 @@ try {
         throw new Exception('La sesión del usuario no es válida.');
     }
 
+    session_write_close();
+
     $mysqli = connect_mysqli();
 
     if (!$mysqli || $mysqli->connect_errno) {
@@ -20,10 +22,6 @@ try {
 
     $mysqli->set_charset('utf8mb4');
 
-    /*
-     * La consulta no recibe parámetros del usuario.
-     * Se seleccionan únicamente los campos necesarios y se ordenan por nombre.
-     */
     $stmt = $mysqli->prepare(
         "SELECT estado_civil_id, nombre
          FROM estado_civil
@@ -57,8 +55,7 @@ try {
         }
     }
 } catch (Throwable $e) {
-    error_log('Error al cargar Estado Civil: ' . $e->getMessage());
-
+    error_log('Error getEstadoCivil.php: ' . $e->getMessage());
     echo '<option value="">No se pudo cargar Estado Civil</option>';
 } finally {
     if ($stmt instanceof mysqli_stmt) {

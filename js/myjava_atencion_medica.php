@@ -44,9 +44,237 @@
   }
 
   function getSafeFechaGlobal() {
-    // si ya existe window.fecha úsala, si no, pedila al server
-    if (typeof window.fecha !== "undefined" && window.fecha) return window.fecha;
-    try { return getFechaActual(); } catch (_) { return ""; }
+    if (typeof window.fecha !== "undefined" && window.fecha) {
+      return window.fecha;
+    }
+
+    // La fecha actual puede obtenerse localmente sin bloquear la interfaz.
+    return convertDate(new Date());
+  }
+
+  var solicitudesActivas = {
+    pagination: null,
+    paginationBusqueda: null,
+    paginarSeguimiento: null,
+    paciente: null,
+    transitoEnviado: null,
+    transitoRecibido: null,
+    pendientes: null,
+    catalogoPacientesAtencion: null,
+    catalogoPacientesTransito: null
+  };
+
+  var estadoCargaInicial = {
+    listadoCargado: false,
+    catalogosIniciados: false,
+    alertaPendientesMostrada: false
+  };
+
+  var estadoComponentesAtencion = {
+    contadoresInicializados: false,
+    speechInicializado: false
+  };
+
+  var temporizadoresUI = {
+    busquedaPrincipal: null,
+    busquedaHistorial: null
+  };
+
+  var cacheCatalogosAtencion = {
+    pacientesHtml: null
+  };
+
+  function destruirSelectpickerPacienteAtencion() {
+    var $select = $('#formulario_atenciones #paciente_consulta');
+
+    if (!$select.length) {
+      return;
+    }
+
+    try {
+      if ($select.data('selectpicker')) {
+        $select.selectpicker('destroy');
+      }
+    } catch (error) {
+      console.warn('No se pudo destruir selectpicker de pacientes:', error);
+    }
+
+    // Eliminar cualquier estructura residual generada por bootstrap-select.
+    $select.siblings('.bootstrap-select').remove();
+    $select.show();
+  }
+
+  function prepararPacienteUnicoAtencion(pacientes_id, nombrePaciente) {
+    var $select = $('#formulario_atenciones #paciente_consulta');
+
+    destruirSelectpickerPacienteAtencion();
+
+    $select
+      .empty()
+      .append(
+        $('<option>', {
+          value: pacientes_id,
+          text: nombrePaciente || 'Paciente seleccionado',
+          selected: true
+        })
+      )
+      .prop('disabled', true);
+
+    // Solo existe una opción, por lo que inicializar el componente es liviano.
+    if (typeof $select.selectpicker === 'function') {
+      $select.selectpicker();
+      $select.selectpicker('render');
+    }
+  }
+
+  function refrescarSelectSinBloquear($select) {
+    if (!$select || !$select.length) return;
+
+    window.requestAnimationFrame(function () {
+      if (typeof $select.selectpicker === 'function') {
+        $select.selectpicker('refresh');
+      }
+    });
+  }
+
+  function abortarSolicitud(nombre) {
+    var solicitud = solicitudesActivas[nombre];
+
+    if (solicitud && solicitud.readyState !== 4) {
+      solicitud.abort();
+    }
+  }
+
+  function programarPaginacion(partida, espera) {
+    clearTimeout(temporizadoresUI.busquedaPrincipal);
+
+    temporizadoresUI.busquedaPrincipal = setTimeout(function () {
+      pagination(partida || 1);
+    }, typeof espera === 'number' ? espera : 250);
+  }
+
+  function obtenerTextoAjax(url, data) {
+    return $.ajax({
+      type: 'POST',
+      url: url,
+      data: data || {},
+      dataType: 'text',
+      cache: false,
+      timeout: 30000
+    });
+  }
+
+  function tienePermisoAtencion() {
+    var usuario = Number(getUsuarioSistema());
+    return usuario === 1 || usuario === 2 || usuario === 3 || usuario === 5;
+  }
+
+  function siguientePintado(callback) {
+    window.requestAnimationFrame(function () {
+      window.requestAnimationFrame(callback);
+    });
+  }
+
+  function ejecutarCuandoEsteLibre(callback, timeout) {
+    if ('requestIdleCallback' in window) {
+      window.requestIdleCallback(callback, {
+        timeout: typeof timeout === 'number' ? timeout : 800
+      });
+      return;
+    }
+
+    setTimeout(callback, 0);
+  }
+
+  function ejecutarTareasEnLotes(tareas, alFinal) {
+    var indice = 0;
+
+    function ejecutarSiguiente() {
+      var inicio = performance.now();
+
+      while (indice < tareas.length && (performance.now() - inicio) < 8) {
+        tareas[indice++]();
+      }
+
+      if (indice < tareas.length) {
+        window.requestAnimationFrame(ejecutarSiguiente);
+        return;
+      }
+
+      if (typeof alFinal === 'function') {
+        alFinal();
+      }
+    }
+
+    window.requestAnimationFrame(ejecutarSiguiente);
+  }
+
+  function mostrarCargaAtencion(mensaje) {
+    $('#main_facturacion').hide();
+    $('#facturacion').hide();
+    $('#atencionMedica').show();
+
+    $('#label_acciones_volver').html('Atenciones Médicas');
+    $('#acciones_atras').removeClass('active');
+    $('#acciones_factura').addClass('active');
+    $('#label_acciones_factura').html('Historia Clínica');
+
+    $('.footer').show();
+    $('.footer1').hide();
+
+    var $formulario = $('#formulario_atenciones');
+    $formulario.css('visibility', 'hidden');
+
+    var $carga = $('#carga_atencion_medica');
+
+    if (!$carga.length) {
+      $carga = $(
+        '<div id="carga_atencion_medica" class="text-center" ' +
+        'style="padding:45px 15px;">' +
+          '<i class="fas fa-spinner fa-spin fa-2x"></i>' +
+          '<div class="mensaje-carga-atencion" style="margin-top:12px;"></div>' +
+        '</div>'
+      );
+
+      $formulario.before($carga);
+    }
+
+    $carga.find('.mensaje-carga-atencion').text(
+      mensaje || 'Cargando atención médica...'
+    );
+    $carga.show();
+  }
+
+  function ocultarCargaAtencion() {
+    $('#carga_atencion_medica').hide();
+    $('#formulario_atenciones').css('visibility', 'visible');
+  }
+
+  function refrescarSelectoresAtencion(selectores, alFinal) {
+    var indice = 0;
+
+    function procesarSiguiente() {
+      if (indice >= selectores.length) {
+        if (typeof alFinal === 'function') {
+          alFinal();
+        }
+        return;
+      }
+
+      var $select = $(selectores[indice++]);
+
+      window.requestAnimationFrame(function () {
+        if ($select.length && typeof $select.selectpicker === 'function') {
+          // Las opciones ya existen. render solo actualiza el valor mostrado;
+          // refresh reconstruye todo el dropdown y congela la interfaz.
+          $select.selectpicker('render');
+        }
+
+        procesarSiguiente();
+      });
+    }
+
+    procesarSiguiente();
   }
 
   // ============================
@@ -112,8 +340,12 @@
       $('#formulario_atenciones #pro').val('Registro');
       $('#formulario_atenciones #pacientes_id').val('');
       $('#formulario_atenciones #agenda_id').val('');
-      $('#formulario_atenciones #paciente_consulta').prop('disabled', false).selectpicker('refresh');
-      $('#formulario_atenciones #servicio_id').prop('disabled', false).selectpicker('refresh');
+      $('#formulario_atenciones #paciente_consulta').prop('disabled', false);
+      $('#formulario_atenciones #servicio_id').prop('disabled', false);
+      if ($('#formulario_atenciones #paciente_consulta').data('selectpicker')) {
+        $('#formulario_atenciones #paciente_consulta').selectpicker('render');
+      }
+      refrescarSelectSinBloquear($('#formulario_atenciones #servicio_id'));
     }
 
     // Detener cualquier dictado que haya quedado activo.
@@ -243,31 +475,49 @@
     $(".footer").show();
     $(".footer1").hide();
 
-    // ---- Inicializar contadores + dictado (sin duplicar eventos)
+    // Los contadores son ligeros. El dictado se inicializa únicamente
+    // cuando se abre la vista de atención para no cargar de más al iniciar.
     inicializarContadores(limites);
-    inicializarSpeechRecognition(limites);
 
-    // ---- Funciones iniciales (las tuyas)
+    // Primero se carga el listado. Esto evita que los catálogos y el aviso
+    // de pendientes retrasen la tabla o dejen la pantalla en blanco.
     try {
-      evaluarRegistrosPendientes();
-      evaluarRegistrosPendientesEmail();
+      pagination(1)
+        .always(function () {
+          estadoCargaInicial.listadoCargado = true;
 
-      // ⛔ quitado el duplicado y el string
-      setInterval(() => pagination(1), 22000);
-      setInterval(() => evaluarRegistrosPendientes(), 1800000); // cada media hora
+          // Los demás catálogos se cargan después de pintar la tabla.
+          setTimeout(function () {
+            funcionesFormPacientes();
 
-      getColaboradoresFacturacion();
-      getPacientesFacturacion();
-      getServiciosFacturacion();
-      getDepartamentos();
-      getReferido();
-      getResponsable();
+            getColaboradoresFacturacion();
+            getPacientesFacturacion();
+            getServiciosFacturacion();
+            getDepartamentos();
+            getReferido();
+            getResponsable();
+
+            evaluarRegistrosPendientesEmail();
+          }, 0);
+
+          // El aviso se muestra únicamente después de tener el listado visible.
+          setTimeout(function () {
+            evaluarRegistrosPendientes();
+          }, 150);
+        });
+
+      setInterval(function () {
+        if (!solicitudesActivas.pagination || solicitudesActivas.pagination.readyState === 4) {
+          pagination(1);
+        }
+      }, 22000);
+
+      setInterval(function () {
+        evaluarRegistrosPendientes();
+      }, 1800000);
     } catch (e) {
       console.error(e);
     }
-
-    // ---- Llamada agrupada (tuya)
-    funcionesFormPacientes();
 
     // Breadcrumb: permite volver desde Historia Clínica o Factura
     $(document)
@@ -301,28 +551,56 @@
     $(document).off("click.atencion", "#form_main #nuevo_registro").on("click.atencion", "#form_main #nuevo_registro", function (e) {
       e.preventDefault();
 
-      if (getUsuarioSistema() == 1 || getUsuarioSistema() == 2 || getUsuarioSistema() == 3 || getUsuarioSistema() == 5) {
+      if (tienePermisoAtencion()) {
+        mostrarCargaAtencion('Preparando nueva atención...');
 
-        $('#formulario_atenciones')[0].reset();
-        limpiarFormPacientes();
+        siguientePintado(function () {
+          ejecutarTareasEnLotes([
+            function () {
+              if ($('#formulario_atenciones').length) {
+                $('#formulario_atenciones')[0].reset();
+              }
+            },
+            function () {
+              limpiarFormPacientes();
+            },
+            function () {
+              $('#reg_atencion').show();
+              $('#edi_atencion').hide();
+            },
+            function () {
+              $('#formulario_atenciones #consultorio_').show();
+              $('#formulario_atenciones #label_servicio').hide();
+              $('#formulario_atenciones #servicio').hide();
+            },
+            function () {
+              $('#formulario_atenciones #fecha').attr('readonly', false);
+              $('#formulario_atenciones #paciente_consulta').attr('disabled', false);
+              $('#reg_atencion').attr('disabled', false);
+            },
+            function () {
+              $('#formulario_atenciones .nav-tabs li:eq(0) a').tab('show');
+            },
+            function () {
+              FormAtencionMedica();
+            }
+          ], function () {
+            getPacientesAtencion()
+              .always(function () {
+                ocultarCargaAtencion();
 
-        $('#reg_atencion').show();
-        $('#edi_atencion').hide();
+                ejecutarCuandoEsteLibre(function () {
+                  inicializarContadores(limites);
 
-        $('#formulario_atenciones #consultorio_').hide();
-        $("#formulario_atenciones #label_servicio").hide();
-        $("#formulario_atenciones #servicio").hide();
+                  if (!estadoComponentesAtencion.speechInicializado) {
+                    inicializarSpeechRecognition(limites);
+                    estadoComponentesAtencion.speechInicializado = true;
+                  }
+                }, 1800);
+              });
+          });
+        });
 
-        $("#formulario_atenciones #fecha").attr('readonly', false);
-        $("#formulario_atenciones #paciente_consulta").attr('disabled', false);
-        $("#reg_atencion").attr('disabled', false);
-
-        $('#formulario_atenciones #consultorio_').show();
-        $('#formulario_atenciones .nav-tabs li:eq(0) a').tab('show');
-
-        $('#formulario_atenciones #paciente_consulta').attr('disabled', false);
-
-        FormAtencionMedica();
         return false;
 
       } else {
@@ -477,7 +755,7 @@
     $(document).off("click.atencion", "#form_main #nuevo-registro").on("click.atencion", "#form_main #nuevo-registro", function (e) {
       e.preventDefault();
 
-      if (getUsuarioSistema() == 1 || getUsuarioSistema() == 2 || getUsuarioSistema() == 3 || getUsuarioSistema() == 5) {
+      if (tienePermisoAtencion()) {
 
         $('#formulario_pacientes #pro').val("Registrar");
         $('#grupo_expediente').hide();
@@ -506,12 +784,17 @@
     $(document).off("click.atencion", "#form_main #transito_enviada").on("click.atencion", "#form_main #transito_enviada", function (e) {
       e.preventDefault();
 
-      if (getUsuarioSistema() == 1 || getUsuarioSistema() == 2 || getUsuarioSistema() == 3 || getUsuarioSistema() == 5) {
+      if (tienePermisoAtencion()) {
 
         $('#formulario_transito_enviada #pro').val("Registro");
 
-        $('#registro_transito_eviada').modal({ show: true, keyboard: false, backdrop: 'static' });
-        limpiarTE();
+        $('#registro_transito_eviada')
+          .one('shown.bs.modal.atencionCarga', function () {
+            ejecutarCuandoEsteLibre(function () {
+              limpiarTE();
+            });
+          })
+          .modal({ show: true, keyboard: false, backdrop: 'static' });
         return false;
 
       } else {
@@ -530,11 +813,16 @@
     $(document).off("click.atencion", "#form_main #transito_recibida").on("click.atencion", "#form_main #transito_recibida", function (e) {
       e.preventDefault();
 
-      if (getUsuarioSistema() == 1 || getUsuarioSistema() == 2 || getUsuarioSistema() == 3 || getUsuarioSistema() == 5) {
+      if (tienePermisoAtencion()) {
 
         $('#formulario_transito_recibida #pro').val("Registro");
-        $('#registro_transito_recibida').modal({ show: true, keyboard: false, backdrop: 'static' });
-        limpiarTR();
+        $('#registro_transito_recibida')
+          .one('shown.bs.modal.atencionCarga', function () {
+            ejecutarCuandoEsteLibre(function () {
+              limpiarTR();
+            });
+          })
+          .modal({ show: true, keyboard: false, backdrop: 'static' });
         return false;
 
       } else {
@@ -590,7 +878,7 @@
     $(document).off("click.atencion", "#form_main #historial").on("click.atencion", "#form_main #historial", function (e) {
       e.preventDefault();
 
-      if (getUsuarioSistema() == 1 || getUsuarioSistema() == 2 || getUsuarioSistema() == 3 || getUsuarioSistema() == 5) {
+      if (tienePermisoAtencion()) {
 
         paginationBusqueda(1);
         $('#formulario_buscarAtencion #pro').val("Búsqueda de Atenciones");
@@ -610,23 +898,39 @@
       }
     });
 
-    // PAGINATION filtros
-    $(document).off("keyup.atencion", "#form_main #bs_regis").on("keyup.atencion", "#form_main #bs_regis", () => pagination(1));
-    $(document).off("change.atencion", "#form_main #fecha_b").on("change.atencion", "#form_main #fecha_b", () => pagination(1));
-    $(document).off("change.atencion", "#form_main #fecha_f").on("change.atencion", "#form_main #fecha_f", () => pagination(1));
-    $(document).off("change.atencion", "#form_main #estado").on("change.atencion", "#form_main #estado", () => pagination(1));
+    // PAGINATION filtros: se evita enviar una consulta por cada tecla.
+    $(document)
+      .off("input.atencion", "#form_main #bs_regis")
+      .on("input.atencion", "#form_main #bs_regis", function () {
+        programarPaginacion(1, 350);
+      });
 
-    // BUSQUEDA historial
-    $(document).off("keyup.atencion", "#formulario_buscarAtencion #busqueda").on("keyup.atencion", "#formulario_buscarAtencion #busqueda", function () {
-      paginationBusqueda(1);
-      $('#formulario_buscarAtencion #paciente_consulta').html('');
-      $('#formulario_buscarAtencion #agrega_registros_busqueda_').html('<td colspan="12" style="color:#C7030D">No se encontraron resultados</td>');
-      $('#formulario_buscarAtencion #pagination_busqueda_').html('');
-    });
+    $(document)
+      .off("change.atencion", "#form_main #fecha_b, #form_main #fecha_f, #form_main #estado")
+      .on("change.atencion", "#form_main #fecha_b, #form_main #fecha_f, #form_main #estado", function () {
+        programarPaginacion(1, 0);
+      });
+
+    // BUSQUEDA historial con espera y cancelación de la solicitud anterior.
+    $(document)
+      .off("input.atencion", "#formulario_buscarAtencion #busqueda")
+      .on("input.atencion", "#formulario_buscarAtencion #busqueda", function () {
+        clearTimeout(temporizadoresUI.busquedaHistorial);
+
+        temporizadoresUI.busquedaHistorial = setTimeout(function () {
+          paginationBusqueda(1);
+        }, 350);
+
+        $('#formulario_buscarAtencion #paciente_consulta').html('');
+        $('#formulario_buscarAtencion #agrega_registros_busqueda_').html(
+          '<td colspan="12" style="color:#C7030D">No se encontraron resultados</td>'
+        );
+        $('#formulario_buscarAtencion #pagination_busqueda_').html('');
+      });
 
     // TRANSITO BOTONES
     $(document).off("click.atencion", "#reg_transitoe").on("click.atencion", "#reg_transitoe", function (e) {
-      if (getUsuarioSistema() == 1 || getUsuarioSistema() == 2 || getUsuarioSistema() == 3 || getUsuarioSistema() == 5) {
+      if (tienePermisoAtencion()) {
         if ($('#formulario_transito_enviada #expediente').val() == "" &&
             $('#formulario_transito_enviada #motivo').val() == "" &&
             $('#formulario_agregar_referencias_recibidas #enviadaa').val() == "") {
@@ -659,7 +963,7 @@
     });
 
     $(document).off("click.atencion", "#reg_transitor").on("click.atencion", "#reg_transitor", function (e) {
-      if (getUsuarioSistema() == 1 || getUsuarioSistema() == 2 || getUsuarioSistema() == 3 || getUsuarioSistema() == 5) {
+      if (tienePermisoAtencion()) {
         if ($('#formulario_transito_recibida #expediente').val() == "" &&
             $('#formulario_transito_recibida #motivo').val() == "" &&
             $('#formulario_agregar_referencias_recibidas #enviadaa').val() == "") {
@@ -691,60 +995,117 @@
       }
     });
 
-    // CAMBIAR % DESCUENTO
-    $(document).off("change.atencion", "#formulario_metodoPago #descuento").on("change.atencion", "#formulario_metodoPago #descuento", function () {
-      var descuento_id = $('#formulario_metodoPago #descuento').val();
-      var agenda_id = $('#formulario_metodoPago #agenda_id').val();
-      var tipo_tarifa = $('#formulario_metodoPago #tipo_tarifa').val();
-      var porcentaje = getPorcentaje(descuento_id, agenda_id);
-      var monto = getMonto(getColaborador_id(), agenda_id, tipo_tarifa);
-      var neto = getNetoCobrar(monto, porcentaje);
-
-      $('#formulario_metodoPago #porcentaje').val(porcentaje);
-      $('#formulario_metodoPago #neto').val(neto);
-    });
-
-    $(document).off("change.atencion", "#formulario_metodoPago #tipo_tarifa").on("change.atencion", "#formulario_metodoPago #tipo_tarifa", function () {
-      var descuento_id = $('#formulario_metodoPago #descuento').val();
-      var agenda_id = $('#formulario_metodoPago #agenda_id').val();
-      var tipo_tarifa = $('#formulario_metodoPago #tipo_tarifa').val();
-
-      var porcentaje = $('#formulario_metodoPago #porcentaje').val() || 0;
-      var monto = getMonto(getColaborador_id(), agenda_id, tipo_tarifa);
-      var neto = getNetoCobrar(monto, porcentaje);
-
-      $('#formulario_metodoPago #monto').val(monto);
-      $('#formulario_metodoPago #neto').val(neto);
-    });
-
-    $(document).off("keyup.atencion", "#formulario_metodoPago #porcentaje").on("keyup.atencion", "#formulario_metodoPago #porcentaje", function () {
-      if ($('#formulario_metodoPago #descuento').val() == "" || $('#formulario_metodoPago #descuento').val() == null) {
-        swal({
-          title: "Error",
-          text: "Por favor seleccione un tipo de descuento antes de continuar",
-          icon: "error",
-          dangerMode: true,
-          closeOnEsc: false,
-          closeOnClickOutside: false
-        });
-        $('#formulario_metodoPago #descuento').focus();
-      } else {
-        var porcentaje = $('#formulario_metodoPago #porcentaje').val();
+    // CAMBIAR % DESCUENTO - operaciones completamente asíncronas.
+    $(document)
+      .off("change.atencion", "#formulario_metodoPago #descuento")
+      .on("change.atencion", "#formulario_metodoPago #descuento", function () {
         var descuento_id = $('#formulario_metodoPago #descuento').val();
         var agenda_id = $('#formulario_metodoPago #agenda_id').val();
         var tipo_tarifa = $('#formulario_metodoPago #tipo_tarifa').val();
-        var monto = getMonto(getColaborador_id(), agenda_id, tipo_tarifa);
-        var neto = getNetoCobrar(monto, porcentaje);
 
-        if (porcentaje != "") {
+        $.when(
+          getPorcentaje(descuento_id, agenda_id),
+          getColaborador_id()
+        ).then(function (porcentajeRespuesta, colaboradorRespuesta) {
+          var porcentaje = Array.isArray(porcentajeRespuesta)
+            ? porcentajeRespuesta[0]
+            : porcentajeRespuesta;
+
+          var colaborador_id = Array.isArray(colaboradorRespuesta)
+            ? colaboradorRespuesta[0]
+            : colaboradorRespuesta;
+
+          return $.when(
+            $.Deferred().resolve(porcentaje),
+            getMonto(colaborador_id, agenda_id, tipo_tarifa)
+          );
+        }).then(function (porcentaje, montoRespuesta) {
+          var monto = Array.isArray(montoRespuesta) ? montoRespuesta[0] : montoRespuesta;
+
+          return $.when(
+            $.Deferred().resolve(porcentaje),
+            getNetoCobrar(monto, porcentaje)
+          );
+        }).done(function (porcentaje, netoRespuesta) {
+          var neto = Array.isArray(netoRespuesta) ? netoRespuesta[0] : netoRespuesta;
+
           $('#formulario_metodoPago #porcentaje').val(porcentaje);
           $('#formulario_metodoPago #neto').val(neto);
-        } else {
-          $('#formulario_metodoPago #porcentaje').val(0);
-          $('#formulario_metodoPago #neto').val(monto);
+        }).fail(function (xhr) {
+          console.error(xhr && xhr.responseText ? xhr.responseText : 'No se pudo calcular el descuento.');
+        });
+      });
+
+    $(document)
+      .off("change.atencion", "#formulario_metodoPago #tipo_tarifa")
+      .on("change.atencion", "#formulario_metodoPago #tipo_tarifa", function () {
+        var agenda_id = $('#formulario_metodoPago #agenda_id').val();
+        var tipo_tarifa = $('#formulario_metodoPago #tipo_tarifa').val();
+        var porcentaje = $('#formulario_metodoPago #porcentaje').val() || 0;
+
+        getColaborador_id()
+          .then(function (colaborador_id) {
+            return getMonto(colaborador_id, agenda_id, tipo_tarifa);
+          })
+          .then(function (monto) {
+            $('#formulario_metodoPago #monto').val(monto);
+
+            return getNetoCobrar(monto, porcentaje);
+          })
+          .done(function (neto) {
+            $('#formulario_metodoPago #neto').val(neto);
+          })
+          .fail(function (xhr) {
+            console.error(xhr && xhr.responseText ? xhr.responseText : 'No se pudo calcular la tarifa.');
+          });
+      });
+
+    $(document)
+      .off("input.atencion", "#formulario_metodoPago #porcentaje")
+      .on("input.atencion", "#formulario_metodoPago #porcentaje", function () {
+        if (!$('#formulario_metodoPago #descuento').val()) {
+          swal({
+            title: "Error",
+            text: "Por favor seleccione un tipo de descuento antes de continuar",
+            icon: "error",
+            dangerMode: true,
+            closeOnEsc: false,
+            closeOnClickOutside: false
+          });
+
+          $('#formulario_metodoPago #descuento').focus();
+          return;
         }
-      }
-    });
+
+        var porcentaje = $('#formulario_metodoPago #porcentaje').val() || 0;
+        var agenda_id = $('#formulario_metodoPago #agenda_id').val();
+        var tipo_tarifa = $('#formulario_metodoPago #tipo_tarifa').val();
+
+        clearTimeout(temporizadoresUI.porcentaje);
+
+        temporizadoresUI.porcentaje = setTimeout(function () {
+          getColaborador_id()
+            .then(function (colaborador_id) {
+              return getMonto(colaborador_id, agenda_id, tipo_tarifa);
+            })
+            .then(function (monto) {
+              $('#formulario_metodoPago #monto').val(monto);
+
+              if (Number(porcentaje) === 0) {
+                $('#formulario_metodoPago #neto').val(monto);
+                return $.Deferred().resolve(monto).promise();
+              }
+
+              return getNetoCobrar(monto, porcentaje);
+            })
+            .done(function (neto) {
+              $('#formulario_metodoPago #neto').val(neto);
+            })
+            .fail(function (xhr) {
+              console.error(xhr && xhr.responseText ? xhr.responseText : 'No se pudo calcular el neto.');
+            });
+        }, 250);
+      });
 
     // TRANSITO TE/TR keyup contador
     $(document).off("keyup.atencion", "#formulario_transito_enviada #motivo").on("keyup.atencion", "#formulario_transito_enviada #motivo", function () {
@@ -770,10 +1131,15 @@
         var url = '<?php echo SERVERURL; ?>php/atencion_pacientes/buscar_expediente.php';
         var pacientes_id = $('#formulario_atenciones #paciente_consulta').val();
 
-        $.ajax({
+        abortarSolicitud('paciente');
+
+        solicitudesActivas.paciente = $.ajax({
           type: 'POST',
           url: url,
-          data: 'pacientes_id=' + pacientes_id,
+          data: { pacientes_id: pacientes_id },
+          dataType: 'text',
+          cache: false,
+          timeout: 30000,
           success: function (data) {
             try {
               var array = parseServerPayload(data, "buscar_expediente.php");
@@ -782,12 +1148,12 @@
               $('#formulario_atenciones #nombre').val(array[1]);
               $('#formulario_atenciones #edad').val(array[2]);
               $('#formulario_atenciones #procedencia').val(array[3]);
-              $('#formulario_atenciones #religion_id').val(array[4]).selectpicker('refresh');
+              $('#formulario_atenciones #religion_id').val(array[4]);
 
               $('#formulario_atenciones #telefono1').val(array[30]);
 
-              $('#formulario_atenciones #profesion_id').val(array[5]).selectpicker('refresh');
-              $('#formulario_atenciones #estado_civil').val(array[13]).selectpicker('refresh');
+              $('#formulario_atenciones #profesion_id').val(array[5]);
+              $('#formulario_atenciones #estado_civil').val(array[13]);
               $('#formulario_atenciones #paciente_consulta').val(array[6]);
 
               $('#formulario_atenciones #antecedentes_medicos_no_psiquiatricos').val(array[7]);
@@ -808,13 +1174,20 @@
 
               $('#formulario_atenciones #num_hijos').val(array[26]);
 
-              $('#formulario_atenciones #escolaridad').val(array[27]).selectpicker('refresh');
+              $('#formulario_atenciones #escolaridad').val(array[27]);
               $('#formulario_atenciones #red_apoyo').val(array[28]);
               $('#formulario_atenciones #terapeuta_actual').val(array[29]);
 
               $('#formulario_atenciones #seguimiento_read').val(array[10]);
               $('#formulario_atenciones #diagnostico').val(array[11]);
               $('#formulario_atenciones #fecha_nac').val(array[12]);
+
+              refrescarSelectoresAtencion([
+                '#formulario_atenciones #religion_id',
+                '#formulario_atenciones #profesion_id',
+                '#formulario_atenciones #estado_civil',
+                '#formulario_atenciones #escolaridad'
+              ]);
 
               $("#reg_atencion").attr('disabled', false);
               return false;
@@ -839,10 +1212,15 @@
         var url = '<?php echo SERVERURL; ?>php/atencion_pacientes/buscar_expediente.php';
         var pacientes_id = $('#formulario_transito_enviada #paciente_te').val();
 
-        $.ajax({
+        abortarSolicitud('transitoEnviado');
+
+        solicitudesActivas.transitoEnviado = $.ajax({
           type: 'POST',
           url: url,
-          data: 'pacientes_id=' + pacientes_id,
+          data: { pacientes_id: pacientes_id },
+          dataType: 'text',
+          cache: false,
+          timeout: 30000,
           success: function (data) {
             try {
               var array = parseServerPayload(data, "buscar_expediente.php(TE)");
@@ -868,10 +1246,15 @@
         var url = '<?php echo SERVERURL; ?>php/atencion_pacientes/buscar_expediente.php';
         var pacientes_id = $('#formulario_transito_recibida #paciente_tr').val();
 
-        $.ajax({
+        abortarSolicitud('transitoRecibido');
+
+        solicitudesActivas.transitoRecibido = $.ajax({
           type: 'POST',
           url: url,
-          data: 'pacientes_id=' + pacientes_id,
+          data: { pacientes_id: pacientes_id },
+          dataType: 'text',
+          cache: false,
+          timeout: 30000,
           success: function (data) {
             try {
               var array = parseServerPayload(data, "buscar_expediente.php(TR)");
@@ -936,11 +1319,14 @@
 
           $('#formulario_facturacion')[0].reset();
           $('#formulario_facturacion #pro').val("Registro");
-          $('#formulario_facturacion #pacientes_id').val(datos[0]).selectpicker('refresh');
+          $('#formulario_facturacion #pacientes_id').val(datos[0]);
+          refrescarSelectSinBloquear($('#formulario_facturacion #pacientes_id'));
 
-          $('#formulario_facturacion #fecha').val(getFechaActual());
-          $('#formulario_facturacion #colaborador_id').val(datos[3]).selectpicker('refresh');
-          $('#formulario_facturacion #servicio_id').val(datos[5]).selectpicker('refresh');
+          $('#formulario_facturacion #fecha').val(convertDate(new Date()));
+          $('#formulario_facturacion #colaborador_id').val(datos[3]);
+          refrescarSelectSinBloquear($('#formulario_facturacion #colaborador_id'));
+          $('#formulario_facturacion #servicio_id').val(datos[5]);
+          refrescarSelectSinBloquear($('#formulario_facturacion #servicio_id'));
 
           $('#label_acciones_volver').html("ATA");
           $('#label_acciones_receta').html("Receta");
@@ -1007,158 +1393,203 @@
   };
 
   window.editarRegistro = function (pacientes_id, agenda_id) {
-    if (getUsuarioSistema() == 1 || getUsuarioSistema() == 2 || getUsuarioSistema() == 3 || getUsuarioSistema() == 5) {
-      if ($('#form_main #estado').val() == 0) {
+    if (!tienePermisoAtencion()) {
+      swal({
+        title: "Acceso Denegado",
+        text: "No tiene permisos para ejecutar esta acción",
+        icon: "error",
+        dangerMode: true,
+        closeOnEsc: false,
+        closeOnClickOutside: false
+      });
+      return false;
+    }
 
-        $('#formulario_atenciones')[0].reset();
-        var url = '<?php echo SERVERURL; ?>php/atencion_pacientes/editar.php';
+    if ($('#form_main #estado').val() != 0) {
+      swal({
+        title: "Error",
+        text: "Lo sentimos, este registro ya existe, no se puede agregar nuevamente su atención",
+        icon: "error",
+        dangerMode: true,
+        closeOnEsc: false,
+        closeOnClickOutside: false
+      });
+      return false;
+    }
 
-        $.ajax({
-          type: 'POST',
-          url: url,
-          data: 'pacientes_id=' + pacientes_id + '&agenda_id=' + agenda_id,
-          success: function (valores) {
-            try {
-              var array = parseServerPayload(valores, "editar.php");
+    // Si una lista grande de pacientes aún se está construyendo, se cancela
+    // antes de mostrar la atención. Esa construcción era la que congelaba la UI.
+    abortarSolicitud('catalogoPacientesAtencion');
+    destruirSelectpickerPacienteAtencion();
 
+    mostrarCargaAtencion('Cargando historia clínica del paciente...');
+
+    // La vista se pinta primero. La consulta inicia en el siguiente frame.
+    siguientePintado(function () {
+      var url = '<?php echo SERVERURL; ?>php/atencion_pacientes/editar.php';
+      var tiempoInicioEdicion = performance.now();
+
+      console.time('Generar atención - total');
+      console.time('Generar atención - editar.php');
+
+      $.ajax({
+        type: 'POST',
+        url: url,
+        data: {
+          pacientes_id: pacientes_id,
+          agenda_id: agenda_id
+        },
+        dataType: 'text',
+        cache: false,
+        timeout: 30000,
+        success: function (valores) {
+          console.timeEnd('Generar atención - editar.php');
+          console.log(
+            'editar.php respondió en',
+            Math.round(performance.now() - tiempoInicioEdicion),
+            'ms'
+          );
+
+          var array;
+
+          try {
+            array = parseServerPayload(valores, 'editar.php');
+          } catch (error) {
+            ocultarCargaAtencion();
+
+            swal({
+              title: 'Error',
+              text: 'La información de la atención no tiene un formato válido.',
+              icon: 'error',
+              dangerMode: true,
+              closeOnEsc: false,
+              closeOnClickOutside: false
+            });
+            return;
+          }
+
+          var tareas = [
+            function () {
+              if ($('#formulario_atenciones').length) {
+                $('#formulario_atenciones')[0].reset();
+              }
+            },
+            function () {
               $('#reg_atencion').hide();
               $('#edi_atencion').show();
               $('#formulario_atenciones #pro').val('Registro');
               $('#formulario_atenciones #pacientes_id').val(pacientes_id);
               $('#formulario_atenciones #agenda_id').val(agenda_id);
+            },
+            function () {
               $('#formulario_atenciones #identidad').val(array[0]);
               $('#formulario_atenciones #nombre').val(array[1]);
-
               $('#formulario_atenciones #telefono1').val(array[31]);
               $('#formulario_atenciones #edad').val(array[2]);
-
               $('#formulario_atenciones #procedencia').val(array[3]);
-              $('#formulario_atenciones #religion_id').val(array[4]).selectpicker('refresh');
-              $('#formulario_atenciones #profesion_id').val(array[5]).selectpicker('refresh');
-
-              $('#formulario_atenciones #paciente_consulta').val(array[6]).selectpicker('refresh');
-
+            },
+            function () {
+              $('#formulario_atenciones #religion_id').val(array[4]);
+              $('#formulario_atenciones #profesion_id').val(array[5]);
+              $('#formulario_atenciones #estado_civil').val(array[15]);
+              $('#formulario_atenciones #escolaridad').val(array[17]);
+              $('#formulario_atenciones #servicio_id').val(array[14]);
+            },
+            function () {
               $('#formulario_atenciones #fecha').val(array[7]);
               $('#formulario_atenciones #fecha_nac').val(array[8]);
-
               $('#formulario_atenciones #seguimiento_read').val(array[13]);
-              $('#formulario_atenciones #servicio_id').val(array[14]).selectpicker('refresh');
-
-              $('#formulario_atenciones #estado_civil').val(array[15]).selectpicker('refresh');
               $('#formulario_atenciones #num_hijos').val(array[16]);
-
-              $('#formulario_atenciones #escolaridad').val(array[17]).selectpicker('refresh');
-
               $('#formulario_atenciones #red_apoyo').val(array[18]);
               $('#formulario_atenciones #terapeuta_actual').val(array[19]);
-
+            },
+            function () {
               $('#formulario_atenciones #antecedentes_medicos_no_psiquiatricos').val(array[9]);
               $('#formulario_atenciones #hospitalizaciones').val(array[10]);
               $('#formulario_atenciones #cirugias').val(array[11]);
-
               $('#formulario_atenciones #alergias').val(array[12]);
+            },
+            function () {
               $('#formulario_atenciones #antecedentes_medicos_psiquiatricos').val(array[20]);
               $('#formulario_atenciones #historia_gineco_obstetrica').val(array[21]);
               $('#formulario_atenciones #medicamentos_previos').val(array[22]);
               $('#formulario_atenciones #medicamentos_actuales').val(array[23]);
+            },
+            function () {
               $('#formulario_atenciones #legal').val(array[24]);
               $('#formulario_atenciones #sustancias').val(array[25]);
               $('#formulario_atenciones #rasgos_personalidad').val(array[26]);
               $('#formulario_atenciones #informacion_adicional').val(array[27]);
               $('#formulario_atenciones #pendientes').val(array[28]);
               $('#formulario_atenciones #diagnostico').val(array[29]);
-
-              $("#formulario_atenciones #fecha").attr('readonly', true);
-              $("#edi_atencion").attr('disabled', false);
-              $("#formulario_atenciones #label_servicio").show();
+            },
+            function () {
+              $('#formulario_atenciones #fecha').attr('readonly', true);
+              $('#edi_atencion').attr('disabled', false);
+              $('#formulario_atenciones #label_servicio').show();
               $('#formulario_atenciones #consultorio_').hide();
-              $('#formulario_atenciones .nav-tabs li:eq(0) a').tab('show');
-
               $('#formulario_atenciones #paciente_consulta').attr('disabled', true);
               $('#formulario_atenciones #procedencia').attr('readonly', false);
-
-              $('#formulario_atenciones').attr({ 'data-form': 'save' });
-              $('#formulario_atenciones').attr({ 'action': '<?php echo SERVERURL; ?>php/atencion_pacientes/agregarRegistro.php' });
-
-              // Re-init sin duplicar handlers
-              inicializarContadores(limites);
-              inicializarSpeechRecognition(limites);
-
-              FormAtencionMedica(true);
-              return false;
-
-            } catch (e) {
-              console.error(e);
+            },
+            function () {
+              $('#formulario_atenciones').attr({
+                'data-form': 'save',
+                'action': '<?php echo SERVERURL; ?>php/atencion_pacientes/agregarRegistro.php'
+              });
+            },
+            function () {
+              $('#formulario_atenciones .nav-tabs li:eq(0) a').tab('show');
             }
-          }
-        });
-        return false;
+          ];
 
-      } else {
-        swal({
-          title: "Error",
-          text: "Lo sentimos, este registro ya existe, no se puede agregar nuevamente su atención",
-          icon: "error",
-          dangerMode: true,
-          closeOnEsc: false,
-          closeOnClickOutside: false
-        });
-      }
-    } else {
-      swal({
-        title: "Acceso Denegado",
-        text: "No tiene permisos para ejecutar esta acción",
-        icon: "error",
-        dangerMode: true,
-        closeOnEsc: false,
-        closeOnClickOutside: false
+          ejecutarTareasEnLotes(tareas, function () {
+            refrescarSelectoresAtencion([
+              '#formulario_atenciones #religion_id',
+              '#formulario_atenciones #profesion_id',
+              '#formulario_atenciones #servicio_id',
+              '#formulario_atenciones #estado_civil',
+              '#formulario_atenciones #escolaridad'
+            ], function () {
+              // En edición desde agenda no hace falta cargar todos los pacientes.
+              // Se crea un select con únicamente el paciente actual.
+              prepararPacienteUnicoAtencion(array[6], array[1]);
+
+              ocultarCargaAtencion();
+              console.timeEnd('Generar atención - total');
+
+              ejecutarCuandoEsteLibre(function () {
+                inicializarContadores(limites);
+
+                if (!estadoComponentesAtencion.speechInicializado) {
+                  inicializarSpeechRecognition(limites);
+                  estadoComponentesAtencion.speechInicializado = true;
+                }
+              }, 1800);
+            });
+          });
+        },
+        error: function (xhr, textStatus, errorThrown) {
+          ocultarCargaAtencion();
+
+          swal({
+            title: 'Error',
+            text: xhr.responseText || errorThrown || textStatus ||
+              'No se pudo cargar la atención médica.',
+            icon: 'error',
+            dangerMode: true,
+            closeOnEsc: false,
+            closeOnClickOutside: false
+          });
+        }
       });
-    }
+    });
+
+    return false;
   };
 
   // AUSENCIA
   window.nosePresentoRegistro = function (pacientes_id, agenda_id) {
-    if (getUsuarioSistema() == 1 || getUsuarioSistema() == 2 || getUsuarioSistema() == 3 || getUsuarioSistema() == 5) {
-      if ($('#form_main #estado').val() == 0) {
-
-        var nombre_usuario = consultarNombre(pacientes_id);
-        var expediente_usuario = consultarExpediente(pacientes_id);
-        var dato = (expediente_usuario == 0) ? nombre_usuario : (nombre_usuario + " (Expediente: " + expediente_usuario + ")");
-
-        swal({
-          title: "¿Esta seguro?",
-          text: "¿Desea remover este usuario: " + dato + " que no se presento a su cita?",
-          content: {
-            element: "input",
-            attributes: { placeholder: "Comentario", type: "text" }
-          },
-          icon: "warning",
-          buttons: {
-            cancel: "Cancelar",
-            confirm: { text: "¡Sí, remover el usuario!", closeModal: false }
-          },
-          dangerMode: true,
-          closeOnEsc: false,
-          closeOnClickOutside: false
-        }).then((value) => {
-          if (value === null || value.trim() === "") {
-            swal("¡Necesita escribir algo!", { icon: "error" });
-            return false;
-          }
-          eliminarRegistro(agenda_id, value);
-        });
-
-      } else {
-        swal({
-          title: "Error",
-          text: "Error al ejecutar esta acción, el usuario debe estar en estatus pendiente",
-          icon: "error",
-          dangerMode: true,
-          closeOnEsc: false,
-          closeOnClickOutside: false
-        });
-      }
-    } else {
+    if (!tienePermisoAtencion()) {
       swal({
         title: "Acceso Denegado",
         text: "No tiene permisos para ejecutar esta acción",
@@ -1167,7 +1598,80 @@
         closeOnEsc: false,
         closeOnClickOutside: false
       });
+      return false;
     }
+
+    if ($('#form_main #estado').val() != 0) {
+      swal({
+        title: "Error",
+        text: "Error al ejecutar esta acción, el usuario debe estar en estatus pendiente",
+        icon: "error",
+        dangerMode: true,
+        closeOnEsc: false,
+        closeOnClickOutside: false
+      });
+      return false;
+    }
+
+    $.when(
+      consultarNombre(pacientes_id),
+      consultarExpediente(pacientes_id)
+    ).done(function (nombreRespuesta, expedienteRespuesta) {
+      var nombre_usuario = Array.isArray(nombreRespuesta)
+        ? nombreRespuesta[0]
+        : nombreRespuesta;
+
+      var expediente_usuario = Array.isArray(expedienteRespuesta)
+        ? expedienteRespuesta[0]
+        : expedienteRespuesta;
+
+      var dato = Number(expediente_usuario) === 0
+        ? nombre_usuario
+        : nombre_usuario + " (Expediente: " + expediente_usuario + ")";
+
+      swal({
+        title: "¿Está seguro?",
+        text: "¿Desea remover este usuario: " + dato + " que no se presentó a su cita?",
+        content: {
+          element: "input",
+          attributes: {
+            placeholder: "Comentario",
+            type: "text"
+          }
+        },
+        icon: "warning",
+        buttons: {
+          cancel: "Cancelar",
+          confirm: {
+            text: "¡Sí, remover el usuario!",
+            closeModal: false
+          }
+        },
+        dangerMode: true,
+        closeOnEsc: false,
+        closeOnClickOutside: false
+      }).then(function (value) {
+        if (value === null || $.trim(value) === "") {
+          swal("¡Necesita escribir algo!", { icon: "error" });
+          return false;
+        }
+
+        eliminarRegistro(agenda_id, value);
+      });
+    }).fail(function (xhr) {
+      console.error(xhr && xhr.responseText ? xhr.responseText : 'No se pudo consultar al paciente.');
+
+      swal({
+        title: "Error",
+        text: "No se pudo consultar la información del paciente.",
+        icon: "error",
+        dangerMode: true,
+        closeOnEsc: false,
+        closeOnClickOutside: false
+      });
+    });
+
+    return false;
   };
 
   window.eliminarRegistro = function (agenda_id, comentario, fecha) {
@@ -1232,12 +1736,20 @@
   // ============================
   window.inicializarContadores = function (limites) {
     Object.keys(limites).forEach(function (campo) {
-      $('#' + campo).off('input.charcount').on('input.charcount', function () {
+      var $campo = $('#formulario_atenciones #' + campo);
+
+      if (!$campo.length) {
+        return;
+      }
+
+      $campo.off('input.charcount').on('input.charcount', function () {
         actualizarCaracteres(campo, 'charNum_' + campo, limites[campo]);
       });
 
       actualizarCaracteres(campo, 'charNum_' + campo, limites[campo]);
     });
+
+    estadoComponentesAtencion.contadoresInicializados = true;
   };
 
   window.actualizarCaracteres = function (campo, contadorId, max_chars) {
@@ -1420,16 +1932,34 @@ window.inicializarSpeechRecognition = function (limites) {
       ? 0
       : $('#form_main #estado').val();
 
-    $.ajax({
+    abortarSolicitud('pagination');
+
+    solicitudesActivas.pagination = $.ajax({
       type: 'POST',
       url: url,
       dataType: 'json',
+      cache: false,
+      timeout: 30000,
       data: {
         partida: partida,
         fechai: fechai,
         fechaf: fechaf,
         dato: dato,
         estado: estado
+      },
+      beforeSend: function () {
+        var $contenedor = $('#agrega-registros-atenciones');
+
+        $contenedor.attr('aria-busy', 'true');
+
+        if (!estadoCargaInicial.listadoCargado && $.trim($contenedor.html()) === '') {
+          $contenedor.html(
+            '<div class="text-center" style="padding:30px 10px;">' +
+              '<i class="fas fa-spinner fa-spin fa-2x"></i>' +
+              '<div style="margin-top:10px;">Cargando atenciones...</div>' +
+            '</div>'
+          );
+        }
       },
       success: function (respuesta) {
         if (!respuesta || respuesta.status !== 'success') {
@@ -1444,8 +1974,11 @@ window.inicializarSpeechRecognition = function (limites) {
 
         $('#agrega-registros-atenciones').html(respuesta.html);
         $('#pagination-atenciones').html(respuesta.pagination);
+        estadoCargaInicial.listadoCargado = true;
       },
       error: function (xhr, textStatus, errorThrown) {
+        if (textStatus === 'abort') return;
+
         var respuesta = xhr.responseJSON;
         var mensaje = respuesta && respuesta.message
           ? respuesta.message
@@ -1455,29 +1988,46 @@ window.inicializarSpeechRecognition = function (limites) {
           '<div class="alert alert-danger">' + mensaje + '</div>'
         );
         $('#pagination-atenciones').html('');
+      },
+      complete: function () {
+        $('#agrega-registros-atenciones').removeAttr('aria-busy');
       }
     });
 
-    return false;
+    return solicitudesActivas.pagination;
   };
 
   window.paginationBusqueda = function (partida) {
     var url = '<?php echo SERVERURL; ?>php/atencion_pacientes/paginar_buscar.php';
-    var dato = ($('#formulario_buscarAtencion #busqueda').val() || '');
+    var dato = $('#formulario_buscarAtencion #busqueda').val() || '';
 
-    $.ajax({
+    abortarSolicitud('paginationBusqueda');
+
+    solicitudesActivas.paginationBusqueda = $.ajax({
       type: 'POST',
       url: url,
-      async: true,
-      data: 'partida=' + partida + '&dato=' + dato,
+      data: {
+        partida: partida,
+        dato: dato
+      },
+      dataType: 'text',
+      cache: false,
+      timeout: 30000,
       success: function (data) {
         try {
           var array = parseServerPayload(data, "paginar_buscar.php");
           $('#formulario_buscarAtencion #agrega_registros_busqueda').html(array[0]);
           $('#formulario_buscarAtencion #pagination_busqueda').html(array[1]);
-        } catch (e) { console.error(e); }
+        } catch (e) {
+          console.error(e);
+        }
+      },
+      error: function (xhr, textStatus, errorThrown) {
+        if (textStatus === 'abort') return;
+        console.error(xhr.responseText || errorThrown || textStatus);
       }
     });
+
     return false;
   };
 
@@ -1490,20 +2040,44 @@ window.inicializarSpeechRecognition = function (limites) {
     var url = '<?php echo SERVERURL; ?>php/atencion_pacientes/paginar_historias_clinicas.php';
     var pacientes_id = $('#formulario_buscarAtencion #pacientes_id').val();
 
-    $.ajax({
+    abortarSolicitud('paginarSeguimiento');
+
+    solicitudesActivas.paginarSeguimiento = $.ajax({
       type: 'POST',
       url: url,
-      async: true,
-      data: 'partida=' + partida + '&pacientes_id=' + pacientes_id,
+      data: {
+        partida: partida,
+        pacientes_id: pacientes_id
+      },
+      dataType: 'text',
+      cache: false,
+      timeout: 30000,
       success: function (data) {
         try {
           var array = parseServerPayload(data, "paginar_historias_clinicas.php");
-          $('#formulario_buscarAtencion #paciente_consulta').html('<b>Paciente:</b> ' + getNombrePaciente(pacientes_id));
+
+          getNombrePaciente(pacientes_id)
+            .done(function (nombrePaciente) {
+              $('#formulario_buscarAtencion #paciente_consulta').html(
+                '<b>Paciente:</b> ' + nombrePaciente
+              );
+            })
+            .fail(function () {
+              $('#formulario_buscarAtencion #paciente_consulta').html('<b>Paciente:</b>');
+            });
+
           $('#formulario_buscarAtencion #agrega_registros_busqueda_').html(array[0]);
           $('#formulario_buscarAtencion #pagination_busqueda_').html(array[1]);
-        } catch (e) { console.error(e); }
+        } catch (e) {
+          console.error(e);
+        }
+      },
+      error: function (xhr, textStatus, errorThrown) {
+        if (textStatus === 'abort') return;
+        console.error(xhr.responseText || errorThrown || textStatus);
       }
     });
+
     return false;
   };
 
@@ -1515,7 +2089,6 @@ window.inicializarSpeechRecognition = function (limites) {
     $('#formulario_atenciones #historia_clinica_read').val('');
     $('#formulario_atenciones #seguimiento').val('');
     $('#formulario_atenciones #seguimiento_read').val('');
-    funcionesFormPacientes();
     $('#formulario_atenciones #pro').val('Registro');
   };
 
@@ -1534,93 +2107,72 @@ window.inicializarSpeechRecognition = function (limites) {
   // --- TU CODIGO TAL CUAL (sin tocar urls/fields), solo dejo aquí las que estaban al final:
 
   window.funcionesFormPacientes = function () {
-    /*
-     * Cargas generales que pueden ejecutarse de forma independiente.
-     * No se llama getServicioAtencion() aquí porque esa función requiere
-     * agenda_id y usa una petición síncrona; ejecutarla sin agenda_id
-     * retrasaba innecesariamente la apertura de la atención.
-     */
-    getServicioTransito();
-    getEstado();
-    getPacientes();
+    if (estadoCargaInicial.catalogosIniciados) {
+      return;
+    }
 
-    /*
-     * Los catálogos de Datos Generales y Consultorio se cargan en paralelo.
-     * La paginación inicia cuando todos finalizaron, sin bloquear la interfaz.
-     */
-    $.when(
-      getConsultorio(),
-      getEscolaridad(),
-      getEstadoCivil(),
-      getProfesion(),
-      getReligion()
-    ).always(function () {
-      pagination(1);
-    });
+    estadoCargaInicial.catalogosIniciados = true;
+
+    // Se lanzan después de cargar el listado para que nunca retrasen la tabla.
+    setTimeout(function () {
+      getServicioTransito();
+      getEstado();
+
+      // La lista grande de pacientes de Atención Médica ya no se carga aquí.
+      // Solo se cargan los pacientes de Tránsito; Atención los carga al crear
+      // una atención nueva y usa un único paciente al editar desde agenda.
+      getPacientesTransito();
+
+      getConsultorio();
+      getEscolaridad();
+      getEstadoCivil();
+      getProfesion();
+      getReligion();
+    }, 0);
   };
 
   window.getNombrePaciente = function (pacientes_id) {
-    var url = '<?php echo SERVERURL; ?>php/atencion_pacientes/getNombrePaciente.php';
-    var paciente;
-    $.ajax({
-      type: 'POST',
-      url: url,
-      data: 'pacientes_id=' + pacientes_id,
-      async: false,
-      success: function (data) { paciente = data; }
-    });
-    return paciente;
+    return obtenerTextoAjax(
+      '<?php echo SERVERURL; ?>php/atencion_pacientes/getNombrePaciente.php',
+      { pacientes_id: pacientes_id }
+    );
   };
 
   window.getMonto = function (colaborador_id, agenda_id, tipo_tarifa) {
-    var url = '<?php echo SERVERURL; ?>php/atencion_pacientes/getMonto.php';
-    var monto;
-    $.ajax({
-      type: 'POST',
-      url: url,
-      data: 'colaborador_id=' + colaborador_id + '&agenda_id=' + agenda_id + '&tipo_tarifa=' + tipo_tarifa,
-      async: false,
-      success: function (data) { monto = data; }
-    });
-    return monto;
+    return obtenerTextoAjax(
+      '<?php echo SERVERURL; ?>php/atencion_pacientes/getMonto.php',
+      {
+        colaborador_id: colaborador_id,
+        agenda_id: agenda_id,
+        tipo_tarifa: tipo_tarifa
+      }
+    );
   };
 
   window.getPorcentaje = function (descuento_id, agenda_id) {
-    var url = '<?php echo SERVERURL; ?>php/atencion_pacientes/getDescuentoPorcentaje.php';
-    var porcentaje;
-    $.ajax({
-      type: 'POST',
-      url: url,
-      data: 'descuento_id=' + descuento_id + '&agenda_id=' + agenda_id,
-      async: false,
-      success: function (data) { porcentaje = data; }
-    });
-    return porcentaje;
+    return obtenerTextoAjax(
+      '<?php echo SERVERURL; ?>php/atencion_pacientes/getDescuentoPorcentaje.php',
+      {
+        descuento_id: descuento_id,
+        agenda_id: agenda_id
+      }
+    );
   };
 
   window.getNetoCobrar = function (monto, porcentaje) {
-    var url = '<?php echo SERVERURL; ?>php/atencion_pacientes/getNetoCobrar.php';
-    var resp;
-    $.ajax({
-      type: 'POST',
-      url: url,
-      data: 'monto=' + monto + '&porcentaje=' + porcentaje,
-      async: false,
-      success: function (data) { resp = data; }
-    });
-    return resp;
+    return obtenerTextoAjax(
+      '<?php echo SERVERURL; ?>php/atencion_pacientes/getNetoCobrar.php',
+      {
+        monto: monto,
+        porcentaje: porcentaje
+      }
+    );
   };
 
   window.getColaborador_id = function () {
-    var url = '<?php echo SERVERURL; ?>php/atencion_pacientes/getColaborador.php';
-    var colaborador_id;
-    $.ajax({
-      type: 'POST',
-      url: url,
-      async: false,
-      success: function (data) { colaborador_id = data; }
-    });
-    return colaborador_id;
+    return obtenerTextoAjax(
+      '<?php echo SERVERURL; ?>php/atencion_pacientes/getColaborador.php'
+    );
   };
 
   window.getServicioTransito = function () {
@@ -1638,7 +2190,7 @@ window.inicializarSpeechRecognition = function (limites) {
   };
 
   window.limpiarTE = function () {
-    getPacientes();
+    getPacientesTransito();
     getColaborador();
     $('#formulario_transito_enviada #pro').val("Registro");
     $('#formulario_transito_enviada #motivo').val("");
@@ -1646,39 +2198,121 @@ window.inicializarSpeechRecognition = function (limites) {
   };
 
   window.limpiarTR = function () {
-    getPacientes();
+    getPacientesTransito();
     getColaborador();
     $('#formulario_transito_recibida #pro').val("Registro");
     $('#formulario_transito_recibida #motivo').val("");
     $("#reg_transitor").attr('disabled', false);
   };
 
-  window.getPacientes = function () {
-    var url = '<?php echo SERVERURL; ?>php/atencion_pacientes/getPacientes.php';
+  window.obtenerCatalogoPacientesHtml = function () {
+    if (cacheCatalogosAtencion.pacientesHtml !== null) {
+      return $.Deferred()
+        .resolve(cacheCatalogosAtencion.pacientesHtml)
+        .promise();
+    }
 
-    $.ajax({
-      type: "POST",
-      url: url,
-      async: true,
-      success: function (data) {
-        $('#formulario_atenciones #paciente_consulta').html("").html(data).selectpicker('refresh');
-        $('#formulario_transito_enviada #paciente_te').html("").html(data).selectpicker('refresh');
-        $('#formulario_transito_recibida #paciente_tr').html("").html(data).selectpicker('refresh');
-      }
+    return $.ajax({
+      type: 'POST',
+      url: '<?php echo SERVERURL; ?>php/atencion_pacientes/getPacientes.php',
+      dataType: 'html',
+      cache: true,
+      timeout: 30000
+    }).then(function (data) {
+      cacheCatalogosAtencion.pacientesHtml = data;
+      return data;
     });
   };
 
+  window.getPacientesAtencion = function () {
+    abortarSolicitud('catalogoPacientesAtencion');
+
+    solicitudesActivas.catalogoPacientesAtencion = obtenerCatalogoPacientesHtml()
+      .then(function (data) {
+        var deferred = $.Deferred();
+        var $select = $('#formulario_atenciones #paciente_consulta');
+
+        destruirSelectpickerPacienteAtencion();
+
+        // Se deja que la vista se pinte antes de insertar una lista grande.
+        siguientePintado(function () {
+          $select.html(data).prop('disabled', false);
+
+          siguientePintado(function () {
+            if (typeof $select.selectpicker === 'function') {
+              $select.selectpicker();
+            }
+
+            deferred.resolve();
+          });
+        });
+
+        return deferred.promise();
+      });
+
+    return solicitudesActivas.catalogoPacientesAtencion;
+  };
+
+  window.getPacientesTransito = function () {
+    abortarSolicitud('catalogoPacientesTransito');
+
+    solicitudesActivas.catalogoPacientesTransito = obtenerCatalogoPacientesHtml()
+      .then(function (data) {
+        var selects = [
+          '#formulario_transito_enviada #paciente_te',
+          '#formulario_transito_recibida #paciente_tr'
+        ];
+
+        var deferred = $.Deferred();
+        var indice = 0;
+
+        function cargarSiguiente() {
+          if (indice >= selects.length) {
+            deferred.resolve();
+            return;
+          }
+
+          var $select = $(selects[indice++]);
+
+          window.requestAnimationFrame(function () {
+            try {
+              if ($select.data('selectpicker')) {
+                $select.selectpicker('destroy');
+              }
+            } catch (_) {}
+
+            $select.html(data);
+
+            window.requestAnimationFrame(function () {
+              if (typeof $select.selectpicker === 'function') {
+                $select.selectpicker();
+              }
+
+              cargarSiguiente();
+            });
+          });
+        }
+
+        cargarSiguiente();
+        return deferred.promise();
+      });
+
+    return solicitudesActivas.catalogoPacientesTransito;
+  };
+
+  // Compatibilidad con llamadas antiguas: carga únicamente donde corresponde.
+  window.getPacientes = function () {
+    return $.when(
+      getPacientesAtencion(),
+      getPacientesTransito()
+    );
+  };
+
   window.getServicioAtencion = function (agenda_id) {
-    var url = '<?php echo SERVERURL; ?>php/atencion_pacientes/servicios.php';
-    var servicio_id;
-    $.ajax({
-      type: 'POST',
-      data: 'agenda_id=' + agenda_id,
-      url: url,
-      async: false,
-      success: function (data) { servicio_id = data; }
-    });
-    return servicio_id;
+    return obtenerTextoAjax(
+      '<?php echo SERVERURL; ?>php/atencion_pacientes/servicios.php',
+      { agenda_id: agenda_id }
+    );
   };
 
   window.getEstado = function () {
@@ -1695,32 +2329,63 @@ window.inicializarSpeechRecognition = function (limites) {
 
   window.evaluarRegistrosPendientes = function () {
     var url = '<?php echo SERVERURL; ?>php/atencion_pacientes/evaluarPendientes.php';
-    var string = '';
     var fecha = getSafeFechaGlobal();
 
-    $.ajax({
+    abortarSolicitud('pendientes');
+
+    solicitudesActivas.pendientes = $.ajax({
       type: 'POST',
-      data: 'fecha=' + fecha,
       url: url,
+      data: { fecha: fecha },
+      dataType: 'text',
+      cache: false,
+      timeout: 30000,
       success: function (valores) {
         try {
-          var datos = parseServerPayload(valores, "evaluarPendientes.php");
-          if (datos[0] > 0) {
-            string = (datos[0] == 1) ? 'Registro pendiente' : 'Registros pendientes';
-            swal({
-              title: 'Advertencia',
-              text: "Se le recuerda que tiene " + datos[0] + " " + string +
-                " de subir en las Atenciones Medicas en este mes de " + datos[1] +
-                ". Debe revisar sus registros pendientes.",
-              icon: 'warning',
-              dangerMode: true,
-              closeOnEsc: false,
-              closeOnClickOutside: false
-            });
+          var datos = parseServerPayload(valores, 'evaluarPendientes.php');
+          var total = Number(datos[0] || 0);
+
+          if (total <= 0) {
+            return;
           }
-        } catch (e) { console.error(e); }
+
+          // Durante la entrada se muestra una sola vez. El intervalo podrá
+          // volver a mostrarla después de treinta minutos.
+          if (!estadoCargaInicial.alertaPendientesMostrada) {
+            estadoCargaInicial.alertaPendientesMostrada = true;
+          }
+
+          var textoRegistro = total === 1
+            ? 'Registro pendiente'
+            : 'Registros pendientes';
+
+          swal({
+            title: 'Advertencia',
+            text: 'Se le recuerda que tiene ' + total + ' ' + textoRegistro +
+              ' de subir en las Atenciones Médicas en este mes de ' + datos[1] +
+              '. Debe revisar sus registros pendientes.',
+            icon: 'warning',
+            dangerMode: true,
+            closeOnEsc: false,
+            closeOnClickOutside: false
+          });
+        } catch (e) {
+          console.error(e);
+        }
+      },
+      error: function (xhr, textStatus, errorThrown) {
+        if (textStatus === 'abort') {
+          return;
+        }
+
+        console.error(
+          'No se pudieron evaluar los registros pendientes:',
+          xhr.responseText || errorThrown || textStatus
+        );
       }
     });
+
+    return solicitudesActivas.pendientes;
   };
 
   window.evaluarRegistrosPendientesEmail = function () {
@@ -1740,7 +2405,7 @@ window.inicializarSpeechRecognition = function (limites) {
         var $select = $('#formulario_atenciones #escolaridad');
 
         $select.html(data);
-        $select.selectpicker('refresh');
+        refrescarSelectSinBloquear($select);
       },
       error: function (xhr, textStatus, errorThrown) {
         console.error(
@@ -1767,7 +2432,7 @@ window.inicializarSpeechRecognition = function (limites) {
         var $select = $('#formulario_atenciones #estado_civil');
 
         $select.html(data);
-        $select.selectpicker('refresh');
+        refrescarSelectSinBloquear($select);
       },
       error: function (xhr, textStatus, errorThrown) {
         console.error(
@@ -1794,7 +2459,7 @@ window.inicializarSpeechRecognition = function (limites) {
         var $select = $('#formulario_atenciones #profesion_id');
 
         $select.html(data);
-        $select.selectpicker('refresh');
+        refrescarSelectSinBloquear($select);
       },
       error: function (xhr, textStatus, errorThrown) {
         console.error(
@@ -1821,7 +2486,7 @@ window.inicializarSpeechRecognition = function (limites) {
         var $select = $('#formulario_atenciones #religion_id');
 
         $select.html(data);
-        $select.selectpicker('refresh');
+        refrescarSelectSinBloquear($select);
       },
       error: function (xhr, textStatus, errorThrown) {
         console.error(
@@ -1848,7 +2513,7 @@ window.inicializarSpeechRecognition = function (limites) {
         var $select = $('#formulario_atenciones #servicio_id');
 
         $select.html(data);
-        $select.selectpicker('refresh');
+        refrescarSelectSinBloquear($select);
       },
       error: function (xhr, textStatus, errorThrown) {
         console.error(
@@ -1870,42 +2535,24 @@ window.inicializarSpeechRecognition = function (limites) {
   };
 
   window.getMes = function (fecha) {
-    var url = '<?php echo SERVERURL; ?>php/atencion_pacientes/getMes.php';
-    var resp;
-    $.ajax({
-      type: 'POST',
-      data: 'fecha=' + fecha,
-      url: url,
-      async: false,
-      success: function (data) { resp = data; }
-    });
-    return resp;
+    return obtenerTextoAjax(
+      '<?php echo SERVERURL; ?>php/atencion_pacientes/getMes.php',
+      { fecha: fecha }
+    );
   };
 
   window.consultarNombre = function (pacientes_id) {
-    var url = '<?php echo SERVERURL; ?>php/pacientes/getNombre.php';
-    var resp;
-    $.ajax({
-      type: 'POST',
-      url: url,
-      data: 'pacientes_id=' + pacientes_id,
-      async: false,
-      success: function (data) { resp = data; }
-    });
-    return resp;
+    return obtenerTextoAjax(
+      '<?php echo SERVERURL; ?>php/pacientes/getNombre.php',
+      { pacientes_id: pacientes_id }
+    );
   };
 
   window.consultarExpediente = function (pacientes_id) {
-    var url = '<?php echo SERVERURL; ?>php/pacientes/getExpedienteInformacion.php';
-    var resp;
-    $.ajax({
-      type: 'POST',
-      url: url,
-      data: 'pacientes_id=' + pacientes_id,
-      async: false,
-      success: function (data) { resp = data; }
-    });
-    return resp;
+    return obtenerTextoAjax(
+      '<?php echo SERVERURL; ?>php/pacientes/getExpedienteInformacion.php',
+      { pacientes_id: pacientes_id }
+    );
   };
 
   // ---- navegación factura/atención (tu código)
@@ -1927,7 +2574,15 @@ window.inicializarSpeechRecognition = function (limites) {
     $('#label_acciones_factura').html("Factura");
 
     $('#formulario_facturacion #fecha').attr('readonly', true);
-    $('#formulario_facturacion #colaborador_id').val(getColaborador_id()).selectpicker('refresh');
+
+    getColaborador_id()
+      .done(function (colaborador_id) {
+        $('#formulario_facturacion #colaborador_id').val(colaborador_id);
+        refrescarSelectSinBloquear($('#formulario_facturacion #colaborador_id'));
+      })
+      .fail(function (xhr) {
+        console.error(xhr && xhr.responseText ? xhr.responseText : 'No se pudo cargar el colaborador.');
+      });
 
     $('#formulario_facturacion').attr({ 'data-form': 'save' });
     $('#formulario_facturacion').attr({ 'action': '<?php echo SERVERURL; ?>php/facturacion/addPreFactura.php' });
@@ -1958,11 +2613,8 @@ window.inicializarSpeechRecognition = function (limites) {
       $('#formulario_atenciones #pro').val('Registro');
     }
 
-    // Los tres templates usan los mismos IDs; se reinician los controles
-    // visibles sin borrar datos cuando preservarDatos es true.
-    inicializarContadores(limites);
-    inicializarSpeechRecognition(limites);
-
+    // Aquí no se inicializan contadores ni reconocimiento de voz.
+    // Esta función debe limitarse a mostrar la vista.
     accion = false;
   };
 
@@ -1977,27 +2629,13 @@ window.inicializarSpeechRecognition = function (limites) {
   };
 
   window.getProfesional = function () {
-    var url = '<?php echo SERVERURL; ?>php/atencion_pacientes/getProfeisonal.php';
-    var profesional;
-    $.ajax({
-      type: 'POST',
-      url: url,
-      async: false,
-      success: function (data) { profesional = data; }
-    });
-    return profesional;
+    return obtenerTextoAjax(
+      '<?php echo SERVERURL; ?>php/atencion_pacientes/getProfeisonal.php'
+    );
   };
 
   window.getFechaActual = function () {
-    var url = '<?php echo SERVERURL; ?>php/atencion_pacientes/getFechaActual.php';
-    var fecha_actual;
-    $.ajax({
-      type: 'POST',
-      url: url,
-      async: false,
-      success: function (data) { fecha_actual = data; }
-    });
-    return fecha_actual;
+    return $.Deferred().resolve(convertDate(new Date())).promise();
   };
 
 })(jQuery);

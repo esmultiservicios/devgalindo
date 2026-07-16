@@ -2,182 +2,289 @@
 session_start();
 include '../funtions.php';
 
-// CONEXION A DB
-$mysqli = connect_mysqli();
+header('Content-Type: application/json; charset=utf-8');
 
-$pacientes_id = $_POST['pacientes_id'];
-$agenda_id = $_POST['agenda_id'];
-
-// CONSULTAR LOS DATOS DEL PACIENTE
-$sql = "SELECT p.identidad AS 'identidad', p.fecha_nacimiento 'fecha_nacimiento', CONCAT(p.nombre, ' ', p.apellido) AS 'paciente', p.localidad AS 'localidad', p.religion_texto AS 'religion', p.profesion_texto AS 'profesion', CAST(a.fecha_cita AS DATE) AS 'fecha', a.servicio_id AS 'servicio_id', p.estado_civil_texto AS 'estado_civil', p.escolaridad_texto AS 'escolaridad', p.red_apoyo, p.terapeuta_actual, p.telefono1 AS 'telefono'
-   FROM agenda AS a
-   INNER JOIN pacientes AS p
-   ON a.pacientes_id = p.pacientes_id
-   WHERE a.agenda_id = '$agenda_id'";
-$result = $mysqli->query($sql) or die($mysqli->error);
-
-$identidad = '';
-$nombre = '';
-$fecha_nacimiento = '';
-$edad = '';
-$profesion = '';
-$religion = '';
-$servicio_id = '';
-$fecha_cita = '';
-$palabra_anos = '';
-$palabra_mes = '';
-$palabra_dia = '';
-$estado_civil = '';
-$escolaridad = '';
-$red_apoyo = '';
-$terapeuta_actual = '';
-$telefono = '';
-
-// OBTENEMOS LOS VALORES DEL REGISTRO
-if ($result->num_rows > 0) {
-	$consulta_registro = $result->fetch_assoc();
-
-	$identidad = $consulta_registro['identidad'];
-	$fecha_nacimiento = $consulta_registro['fecha_nacimiento'];
-	$paciente = $consulta_registro['paciente'];
-	$localidad = $consulta_registro['localidad'];
-	$religion = $consulta_registro['religion'];
-	$profesion = $consulta_registro['profesion'];
-	$fecha_cita = $consulta_registro['fecha'];
-	$servicio_id = $consulta_registro['servicio_id'];
-	$estado_civil = $consulta_registro['estado_civil'];
-	$escolaridad = $consulta_registro['escolaridad'];
-	$red_apoyo = $consulta_registro['red_apoyo'];
-	$terapeuta_actual = $consulta_registro['terapeuta_actual'];
-	$telefono = $consulta_registro['telefono'];
-
-	// CONSULTA AÑO, MES y DIA DEL PACIENTE
-	$valores_array = getEdad($fecha_nacimiento);
-	$anos = $valores_array['anos'];
-	$meses = $valores_array['meses'];
-	$dias = $valores_array['dias'];
-	/*********************************************************************************/
-
-	if ($anos > 1) {
-		$palabra_anos = 'Años';
-	} else {
-		$palabra_anos = 'Año';
-	}
-
-	if ($meses > 1) {
-		$palabra_mes = 'Meses';
-	} else {
-		$palabra_mes = 'Mes';
-	}
-
-	if ($dias > 1) {
-		$palabra_dia = 'Días';
-	} else {
-		$palabra_dia = 'Día';
-	}
+function responderError($mensaje, $codigoHttp = 400)
+{
+    http_response_code($codigoHttp);
+    echo json_encode(array(
+        'status' => 'error',
+        'title' => 'Error',
+        'message' => $mensaje,
+        'type' => 'error'
+    ), JSON_UNESCAPED_UNICODE);
+    exit;
 }
 
-// OBTENER HISTORIA CLINICA
-$query_historia = "SELECT pacientes_id, antecedentes_medicos_no_psiquiatricos, hospitalizaciones, cirugias, alergias, antecedentes_medicos_psiquiatricos, historia_gineco_obstetrica, medicamentos_previos, medicamentos_actuales, legal, sustancias, rasgos_personalidad, informacion_adicional, pendientes, diagnostico, seguimiento, num_hijos
-	FROM atenciones_medicas
-	WHERE pacientes_id = '$pacientes_id'
-	ORDER BY atencion_id DESC limit 1";
-$result_historia = $mysqli->query($query_historia) or die($mysqli->error);
+$mysqli = null;
+$stmtPaciente = null;
+$stmtHistoria = null;
+$stmtSeguimiento = null;
 
-$antecedentes_medicos_no_psiquiatricos = '';
-$hospitalizaciones = '';
-$cirugias = '';
-$alergias = '';
-$antecedentes_medicos_psiquiatricos = '';
-$historia_gineco_obstetrica = '';
-$medicamentos_previos = '';
-$medicamentos_actuales = '';
-$legal = '';
-$sustancias = '';
-$rasgos_personalidad = '';
-$informacion_adicional = '';
-$pendientes = '';
-$diagnostico = '';
-$seguimiento = '';
+try {
+    if (!isset($_SESSION['colaborador_id']) || !is_numeric($_SESSION['colaborador_id'])) {
+        responderError('La sesión del usuario no es válida. Inicie sesión nuevamente.', 401);
+    }
 
-$num_hijos = 0;
+    /*
+     * Libera el bloqueo de la sesión cuanto antes.
+     * Este endpoint solo necesita validar que la sesión exista.
+     */
+    session_write_close();
 
-if ($result_historia->num_rows > 0) {
-	$consulta_historia = $result_historia->fetch_assoc();
+    $pacientes_id = isset($_POST['pacientes_id']) ? (int) $_POST['pacientes_id'] : 0;
+    $agenda_id = isset($_POST['agenda_id']) ? (int) $_POST['agenda_id'] : 0;
 
-	$antecedentes_medicos_no_psiquiatricos = $consulta_historia['antecedentes_medicos_no_psiquiatricos'];
-	$hospitalizaciones = $consulta_historia['hospitalizaciones'];
-	$cirugias = $consulta_historia['cirugias'];
-	$alergias = $consulta_historia['alergias'];
-	$antecedentes_medicos_psiquiatricos = $consulta_historia['antecedentes_medicos_psiquiatricos'];
-	$historia_gineco_obstetrica = $consulta_historia['historia_gineco_obstetrica'];
-	$medicamentos_previos = $consulta_historia['medicamentos_previos'];
-	$medicamentos_actuales = $consulta_historia['medicamentos_actuales'];
-	$legal = $consulta_historia['legal'];
-	$sustancias = $consulta_historia['sustancias'];
-	$rasgos_personalidad = $consulta_historia['rasgos_personalidad'];
-	$informacion_adicional = $consulta_historia['informacion_adicional'];
-	$pendientes = $consulta_historia['pendientes'];
-	$diagnostico = $consulta_historia['diagnostico'];
-	$seguimiento = $consulta_historia['seguimiento'];
+    if ($pacientes_id <= 0 || $agenda_id <= 0) {
+        responderError('El paciente o la agenda no son válidos.');
+    }
 
-	$num_hijos = $consulta_historia['num_hijos'];
+    $mysqli = connect_mysqli();
+
+    if (!$mysqli || $mysqli->connect_errno) {
+        throw new Exception('No se pudo establecer conexión con la base de datos.');
+    }
+
+    $mysqli->set_charset('utf8mb4');
+
+    /*
+     * Consulta principal:
+     * - Usa agenda_id y pacientes_id para evitar cargar datos de otra agenda.
+     * - No usa CAST() en el WHERE.
+     * - Solo devuelve los campos utilizados por el JavaScript.
+     */
+    $stmtPaciente = $mysqli->prepare(
+        "SELECT
+            p.identidad,
+            p.fecha_nacimiento,
+            CONCAT(p.nombre, ' ', p.apellido) AS paciente,
+            p.localidad,
+            p.religion_texto AS religion,
+            p.profesion_texto AS profesion,
+            DATE(a.fecha_cita) AS fecha,
+            a.servicio_id,
+            p.estado_civil_texto AS estado_civil,
+            p.escolaridad_texto AS escolaridad,
+            p.red_apoyo,
+            p.terapeuta_actual,
+            p.telefono1 AS telefono
+         FROM agenda AS a
+         INNER JOIN pacientes AS p
+            ON a.pacientes_id = p.pacientes_id
+         WHERE a.agenda_id = ?
+           AND a.pacientes_id = ?
+         LIMIT 1"
+    );
+
+    if (!$stmtPaciente) {
+        throw new Exception('No se pudo preparar la consulta del paciente: ' . $mysqli->error);
+    }
+
+    $stmtPaciente->bind_param('ii', $agenda_id, $pacientes_id);
+
+    if (!$stmtPaciente->execute()) {
+        throw new Exception('No se pudo consultar el paciente: ' . $stmtPaciente->error);
+    }
+
+    $resultadoPaciente = $stmtPaciente->get_result();
+
+    if ($resultadoPaciente->num_rows !== 1) {
+        responderError('La agenda seleccionada no corresponde al paciente.');
+    }
+
+    $pacienteDatos = $resultadoPaciente->fetch_assoc();
+
+    $identidad = (string) ($pacienteDatos['identidad'] ?? '');
+    $fecha_nacimiento = (string) ($pacienteDatos['fecha_nacimiento'] ?? '');
+    $paciente = (string) ($pacienteDatos['paciente'] ?? '');
+    $localidad = (string) ($pacienteDatos['localidad'] ?? '');
+    $religion = (string) ($pacienteDatos['religion'] ?? '');
+    $profesion = (string) ($pacienteDatos['profesion'] ?? '');
+    $fecha_cita = (string) ($pacienteDatos['fecha'] ?? '');
+    $servicio_id = (int) ($pacienteDatos['servicio_id'] ?? 0);
+    $estado_civil = (string) ($pacienteDatos['estado_civil'] ?? '');
+    $escolaridad = (string) ($pacienteDatos['escolaridad'] ?? '');
+    $red_apoyo = (string) ($pacienteDatos['red_apoyo'] ?? '');
+    $terapeuta_actual = (string) ($pacienteDatos['terapeuta_actual'] ?? '');
+    $telefono = (string) ($pacienteDatos['telefono'] ?? '');
+
+    $anos = 0;
+    $meses = 0;
+    $dias = 0;
+
+    if ($fecha_nacimiento !== '' && $fecha_nacimiento !== '0000-00-00') {
+        $edad = getEdad($fecha_nacimiento);
+        $anos = isset($edad['anos']) ? (int) $edad['anos'] : 0;
+        $meses = isset($edad['meses']) ? (int) $edad['meses'] : 0;
+        $dias = isset($edad['dias']) ? (int) $edad['dias'] : 0;
+    }
+
+    $palabra_anos = $anos === 1 ? 'Año' : 'Años';
+    $palabra_mes = $meses === 1 ? 'Mes' : 'Meses';
+    $palabra_dia = $dias === 1 ? 'Día' : 'Días';
+
+    /*
+     * Última historia clínica.
+     * LIMIT 1 evita traer más columnas y filas de las necesarias.
+     */
+    $stmtHistoria = $mysqli->prepare(
+        "SELECT
+            antecedentes_medicos_no_psiquiatricos,
+            hospitalizaciones,
+            cirugias,
+            alergias,
+            antecedentes_medicos_psiquiatricos,
+            historia_gineco_obstetrica,
+            medicamentos_previos,
+            medicamentos_actuales,
+            legal,
+            sustancias,
+            rasgos_personalidad,
+            informacion_adicional,
+            pendientes,
+            diagnostico,
+            seguimiento,
+            num_hijos
+         FROM atenciones_medicas
+         WHERE pacientes_id = ?
+         ORDER BY atencion_id DESC
+         LIMIT 1"
+    );
+
+    if (!$stmtHistoria) {
+        throw new Exception('No se pudo preparar la historia clínica: ' . $mysqli->error);
+    }
+
+    $stmtHistoria->bind_param('i', $pacientes_id);
+
+    if (!$stmtHistoria->execute()) {
+        throw new Exception('No se pudo consultar la historia clínica: ' . $stmtHistoria->error);
+    }
+
+    $resultadoHistoria = $stmtHistoria->get_result();
+    $historia = $resultadoHistoria->num_rows === 1
+        ? $resultadoHistoria->fetch_assoc()
+        : array();
+
+    $antecedentes_medicos_no_psiquiatricos = (string) ($historia['antecedentes_medicos_no_psiquiatricos'] ?? '');
+    $hospitalizaciones = (string) ($historia['hospitalizaciones'] ?? '');
+    $cirugias = (string) ($historia['cirugias'] ?? '');
+    $alergias = (string) ($historia['alergias'] ?? '');
+    $antecedentes_medicos_psiquiatricos = (string) ($historia['antecedentes_medicos_psiquiatricos'] ?? '');
+    $historia_gineco_obstetrica = (string) ($historia['historia_gineco_obstetrica'] ?? '');
+    $medicamentos_previos = (string) ($historia['medicamentos_previos'] ?? '');
+    $medicamentos_actuales = (string) ($historia['medicamentos_actuales'] ?? '');
+    $legal = (string) ($historia['legal'] ?? '');
+    $sustancias = (string) ($historia['sustancias'] ?? '');
+    $rasgos_personalidad = (string) ($historia['rasgos_personalidad'] ?? '');
+    $informacion_adicional = (string) ($historia['informacion_adicional'] ?? '');
+    $pendientes = (string) ($historia['pendientes'] ?? '');
+    $diagnostico = (string) ($historia['diagnostico'] ?? '');
+    $seguimiento = (string) ($historia['seguimiento'] ?? '');
+    $num_hijos = isset($historia['num_hijos']) ? (int) $historia['num_hijos'] : 0;
+
+    /*
+     * Historial de seguimiento.
+     * Solo trae filas que realmente contienen seguimiento.
+     * Se mantiene todo el historial para no cambiar la lógica del sistema.
+     */
+    $stmtSeguimiento = $mysqli->prepare(
+        "SELECT fecha, seguimiento
+         FROM atenciones_medicas
+         WHERE pacientes_id = ?
+           AND seguimiento IS NOT NULL
+           AND seguimiento <> ''
+         ORDER BY fecha DESC, atencion_id DESC"
+    );
+
+    if (!$stmtSeguimiento) {
+        throw new Exception('No se pudo preparar el seguimiento: ' . $mysqli->error);
+    }
+
+    $stmtSeguimiento->bind_param('i', $pacientes_id);
+
+    if (!$stmtSeguimiento->execute()) {
+        throw new Exception('No se pudo consultar el seguimiento: ' . $stmtSeguimiento->error);
+    }
+
+    $resultadoSeguimiento = $stmtSeguimiento->get_result();
+    $seguimiento_consulta = '';
+
+    while ($filaSeguimiento = $resultadoSeguimiento->fetch_assoc()) {
+        $fechaSeguimiento = (string) ($filaSeguimiento['fecha'] ?? '');
+        $textoSeguimiento = (string) ($filaSeguimiento['seguimiento'] ?? '');
+
+        if ($fechaSeguimiento === '' || $textoSeguimiento === '') {
+            continue;
+        }
+
+        $seguimiento_consulta .=
+            'Fecha: ' . formatear_fecha($fechaSeguimiento) . "\n" .
+            $textoSeguimiento . "\n\n";
+    }
+
+    /*
+     * Se conserva exactamente el arreglo posicional que consume el JS.
+     */
+    $datos = array(
+        0 => $identidad,
+        1 => $paciente,
+        2 => $anos . ' ' . $palabra_anos . ', ' .
+             $meses . ' ' . $palabra_mes . ' y ' .
+             $dias . ' ' . $palabra_dia,
+        3 => $localidad,
+        4 => $religion,
+        5 => $profesion,
+        6 => $pacientes_id,
+        7 => $fecha_cita,
+        8 => $fecha_nacimiento,
+        9 => $antecedentes_medicos_no_psiquiatricos,
+        10 => $hospitalizaciones,
+        11 => $cirugias,
+        12 => $alergias,
+        13 => $seguimiento_consulta,
+        14 => $servicio_id,
+        15 => $estado_civil,
+        16 => $num_hijos,
+        17 => $escolaridad,
+        18 => $red_apoyo,
+        19 => $terapeuta_actual,
+        20 => $antecedentes_medicos_psiquiatricos,
+        21 => $historia_gineco_obstetrica,
+        22 => $medicamentos_previos,
+        23 => $medicamentos_actuales,
+        24 => $legal,
+        25 => $sustancias,
+        26 => $rasgos_personalidad,
+        27 => $informacion_adicional,
+        28 => $pendientes,
+        29 => $diagnostico,
+        30 => $seguimiento,
+        31 => $telefono
+    );
+
+    echo json_encode($datos, JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_SUBSTITUTE);
+} catch (Throwable $e) {
+    error_log('Error editar.php: ' . $e->getMessage());
+
+    responderError(
+        'No se pudo cargar la información de la atención.',
+        500
+    );
+} finally {
+    if ($stmtPaciente instanceof mysqli_stmt) {
+        $stmtPaciente->close();
+    }
+
+    if ($stmtHistoria instanceof mysqli_stmt) {
+        $stmtHistoria->close();
+    }
+
+    if ($stmtSeguimiento instanceof mysqli_stmt) {
+        $stmtSeguimiento->close();
+    }
+
+    if ($mysqli instanceof mysqli) {
+        $mysqli->close();
+    }
 }
-
-// OBTENER SEGUIMIENTO
-$query_seguimiento = "SELECT fecha, seguimiento
-	FROM atenciones_medicas
-	WHERE pacientes_id = '$pacientes_id'
-	ORDER BY fecha DESC";  // Ordenar por fecha de manera descendente
-
-$result_seguimiento = $mysqli->query($query_seguimiento) or die($mysqli->error);
-
-$seguimiento_consulta = '';
-
-while ($registro_seguimiento = $result_seguimiento->fetch_assoc()) {
-	$fecha = $registro_seguimiento['fecha'];
-	$fecha_formateada = formatear_fecha($fecha);  // Formatear la fecha
-	$seguimiento = $registro_seguimiento['seguimiento'];
-
-	$seguimiento_consulta .= 'Fecha: ' . $fecha_formateada . "\n" . $seguimiento . "\n\n";
-}
-
-$datos = array(
-	0 => $identidad,
-	1 => $paciente,
-	2 => $anos . ' ' . $palabra_anos . ', ' . $meses . ' ' . $palabra_mes . ' y ' . $dias . ' ' . $palabra_dia,
-	3 => $localidad,
-	4 => $religion,
-	5 => $profesion,
-	6 => $pacientes_id,
-	7 => $fecha_cita,
-	8 => $fecha_nacimiento,
-	9 => $antecedentes_medicos_no_psiquiatricos,
-	10 => $hospitalizaciones,
-	11 => $cirugias,
-	12 => $alergias,
-	13 => $seguimiento_consulta,
-	14 => $servicio_id,
-	15 => $estado_civil,
-	16 => $num_hijos,
-	17 => $escolaridad,
-	18 => $red_apoyo,
-	19 => $terapeuta_actual,
-	20 => $antecedentes_medicos_psiquiatricos,
-	21 => $historia_gineco_obstetrica,
-	22 => $medicamentos_previos,
-	23 => $medicamentos_actuales,
-	24 => $legal,
-	25 => $sustancias,
-	26 => $rasgos_personalidad,
-	27 => $informacion_adicional,
-	28 => $pendientes,
-	29 => $diagnostico,
-	30 => $seguimiento,
-	31 => $telefono,
-);
-
-echo json_encode($datos);
-
-$result->free();  // LIMPIAR RESULTADO
-$mysqli->close();  // CERRAR CONEXIÓN

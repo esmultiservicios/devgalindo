@@ -12,6 +12,8 @@ try {
         throw new Exception('La sesión del usuario no es válida.');
     }
 
+    session_write_close();
+
     $mysqli = connect_mysqli();
 
     if (!$mysqli || $mysqli->connect_errno) {
@@ -20,10 +22,6 @@ try {
 
     $mysqli->set_charset('utf8mb4');
 
-    /*
-     * La consulta no recibe parámetros del usuario.
-     * Se seleccionan únicamente los campos necesarios y se ordenan por nombre.
-     */
     $stmt = $mysqli->prepare(
         "SELECT escolaridad_id, nombre
          FROM escolaridad
@@ -57,8 +55,7 @@ try {
         }
     }
 } catch (Throwable $e) {
-    error_log('Error al cargar Escolaridad: ' . $e->getMessage());
-
+    error_log('Error getEscolaridad.php: ' . $e->getMessage());
     echo '<option value="">No se pudo cargar Escolaridad</option>';
 } finally {
     if ($stmt instanceof mysqli_stmt) {

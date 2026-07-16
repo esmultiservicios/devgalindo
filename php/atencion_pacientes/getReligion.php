@@ -12,6 +12,8 @@ try {
         throw new Exception('La sesión del usuario no es válida.');
     }
 
+    session_write_close();
+
     $mysqli = connect_mysqli();
 
     if (!$mysqli || $mysqli->connect_errno) {
@@ -20,10 +22,6 @@ try {
 
     $mysqli->set_charset('utf8mb4');
 
-    /*
-     * No se reciben parámetros del usuario.
-     * Se consultan únicamente los campos necesarios.
-     */
     $stmt = $mysqli->prepare(
         "SELECT religion_id, nombre
          FROM religion
@@ -46,19 +44,18 @@ try {
         echo '<option value="">No hay registros</option>';
     } else {
         while ($registro = $resultado->fetch_assoc()) {
-            $religion_id = (int) $registro['religion_id'];
+            $id = (int) $registro['religion_id'];
             $nombre = htmlspecialchars(
                 (string) $registro['nombre'],
                 ENT_QUOTES | ENT_SUBSTITUTE,
                 'UTF-8'
             );
 
-            echo '<option value="' . $religion_id . '">' . $nombre . '</option>';
+            echo '<option value="' . $id . '">' . $nombre . '</option>';
         }
     }
 } catch (Throwable $e) {
-    error_log('Error al cargar Religión: ' . $e->getMessage());
-
+    error_log('Error getReligion.php: ' . $e->getMessage());
     echo '<option value="">No se pudo cargar Religión</option>';
 } finally {
     if ($stmt instanceof mysqli_stmt) {

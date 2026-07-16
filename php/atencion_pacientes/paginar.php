@@ -28,6 +28,11 @@ try {
     }
 
     $colaborador_id = (int) $_SESSION['colaborador_id'];
+
+    // Libera inmediatamente el bloqueo de la sesión. De esta manera las
+    // demás peticiones AJAX pueden ejecutarse en paralelo y no quedan en cola.
+    session_write_close();
+
     $paginaActual = isset($_POST['partida']) ? (int) $_POST['partida'] : 1;
     $paginaActual = $paginaActual > 0 ? $paginaActual : 1;
 
@@ -49,6 +54,15 @@ try {
         throw new Exception('El rango de fechas no es válido.');
     }
 
+    if ($fechai > $fechaf) {
+        throw new Exception('La fecha inicial no puede ser mayor que la fecha final.');
+    }
+
+    $fechaDesde = $fechai . ' 00:00:00';
+    $fechaHastaObj = new DateTime($fechaf);
+    $fechaHastaObj->modify('+1 day');
+    $fechaHasta = $fechaHastaObj->format('Y-m-d 00:00:00');
+
     $mysqli = connect_mysqli();
 
     if (!$mysqli || $mysqli->connect_errno) {
@@ -65,7 +79,7 @@ try {
         INNER JOIN pacientes AS p ON a.pacientes_id = p.pacientes_id
         INNER JOIN servicios AS s ON a.servicio_id = s.servicio_id
         INNER JOIN colaboradores AS c ON a.colaborador_id = c.colaborador_id
-        WHERE CAST(a.fecha_cita AS DATE) BETWEEN ? AND ?
+        WHERE a.fecha_cita >= ? AND a.fecha_cita < ?
           AND a.status = ?
           AND a.colaborador_id = ?
           AND a.preclinica = 1
@@ -85,8 +99,8 @@ try {
 
     $stmtCount->bind_param(
         'ssiisssss',
-        $fechai,
-        $fechaf,
+        $fechaDesde,
+        $fechaHasta,
         $estado,
         $colaborador_id,
         $busqueda,
@@ -135,14 +149,14 @@ try {
                 ELSE 'Desconocido'
             END AS estatus,
             a.status,
-            CAST(a.fecha_cita AS DATE) AS fecha,
+            DATE(a.fecha_cita) AS fecha,
             c.colaborador_id,
             s.servicio_id
         FROM agenda AS a
         INNER JOIN pacientes AS p ON a.pacientes_id = p.pacientes_id
         INNER JOIN servicios AS s ON a.servicio_id = s.servicio_id
         INNER JOIN colaboradores AS c ON a.colaborador_id = c.colaborador_id
-        WHERE CAST(a.fecha_cita AS DATE) BETWEEN ? AND ?
+        WHERE a.fecha_cita >= ? AND a.fecha_cita < ?
           AND a.status = ?
           AND a.colaborador_id = ?
           AND a.preclinica = 1
@@ -164,8 +178,8 @@ try {
 
     $stmtData->bind_param(
         'ssiisssssii',
-        $fechai,
-        $fechaf,
+        $fechaDesde,
+        $fechaHasta,
         $estado,
         $colaborador_id,
         $busqueda,

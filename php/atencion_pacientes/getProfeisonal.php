@@ -1,26 +1,59 @@
 <?php
-session_start();   
+session_start();
 include "../funtions.php";
 
-//CONEXION A DB
-$mysqli = connect_mysqli();
+header('Content-Type: text/plain; charset=utf-8');
 
-$colaborador_id = $_SESSION['colaborador_id'];
+$mysqli = null;
+$stmt = null;
 
-//CONSULTAR NOMBRE PROFESIONAL
-$query = "SELECT CONCAT(nombre, ' ', apellido) AS 'nombre'
-	FROM colaboradores
-	WHERE colaborador_id = '$colaborador_id'"; 
-$result = $mysqli->query($query) or die($mysqli->error);
-$consulta2 = $result->fetch_assoc();
+try {
+    if (!isset($_SESSION['colaborador_id']) || !is_numeric($_SESSION['colaborador_id'])) {
+        throw new Exception('La sesión del usuario no es válida.');
+    }
 
-$colaborador = '';
+    $colaborador_id = (int) $_SESSION['colaborador_id'];
+    session_write_close();
 
-if($result->num_rows>0){
-	 $colaborador = $consulta2['nombre'];
-}	
-	
-echo $colaborador;
+    $mysqli = connect_mysqli();
 
-$result->free();//LIMPIAR RESULTADO
-$mysqli->close();//CERRAR CONEXIÓN
+    if (!$mysqli || $mysqli->connect_errno) {
+        throw new Exception('No se pudo establecer conexión con la base de datos.');
+    }
+
+    $mysqli->set_charset('utf8mb4');
+
+    $stmt = $mysqli->prepare(
+        "SELECT CONCAT(nombre, ' ', apellido) AS nombre
+         FROM colaboradores
+         WHERE colaborador_id = ?
+         LIMIT 1"
+    );
+
+    if (!$stmt) {
+        throw new Exception('No se pudo preparar la consulta del profesional: ' . $mysqli->error);
+    }
+
+    $stmt->bind_param('i', $colaborador_id);
+
+    if (!$stmt->execute()) {
+        throw new Exception('No se pudo consultar el profesional: ' . $stmt->error);
+    }
+
+    $resultado = $stmt->get_result();
+
+    echo $resultado->num_rows === 1
+        ? (string) $resultado->fetch_assoc()['nombre']
+        : '';
+} catch (Throwable $e) {
+    error_log('Error getProfeisonal.php: ' . $e->getMessage());
+    echo '';
+} finally {
+    if ($stmt instanceof mysqli_stmt) {
+        $stmt->close();
+    }
+
+    if ($mysqli instanceof mysqli) {
+        $mysqli->close();
+    }
+}
