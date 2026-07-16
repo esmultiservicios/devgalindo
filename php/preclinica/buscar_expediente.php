@@ -1,53 +1,57 @@
 <?php
-session_start();   
+session_start();
 include "../funtions.php";
-	
-//CONEXION A DB
-$mysqli = connect_mysqli(); 
 
-$expediente_valor = $_POST['expediente'];
+header('Content-Type: application/json; charset=utf-8');
 
-$consultar_expediente = "SELECT expediente
-    FROM pacientes 
-	WHERE expediente = '$expediente_valor' OR identidad = '$expediente_valor'";
-$result = $mysqli->query($consultar_expediente);	
-$consultar_expediente2 = $result->fetch_assoc();
-$expediente = $consultar_expediente2['expediente'];
+$mysqli = null;
+$stmt = null;
 
-//OBTENEMOS LOS VALORES DEL REGISTRO
+try {
+    $valor = trim((string)($_POST['expediente'] ?? ''));
 
-//CONSULTA EN LA ENTIDAD CORPORACION
-$valores = "SELECT identidad, CONCAT(nombre,' ',apellido) AS 'nombre'
-     FROM pacientes
-     WHERE expediente = '$expediente' OR identidad = '$expediente'";
-$result = $mysqli->query($valores);	 
+    if ($valor === '') {
+        echo json_encode(array('Error', '', ''), JSON_UNESCAPED_UNICODE);
+        exit;
+    }
 
-$valores2 = $result->fetch_assoc();
-$fecha = date('Y-m-d');
+    $mysqli = connect_mysqli();
+    if (!$mysqli || $mysqli->connect_errno) throw new Exception('No se pudo conectar con la base de datos.');
+    $mysqli->set_charset('utf8mb4');
 
-if($expediente != 0){
-   if($result->num_rows>0){
-	   $datos = array(
-				0 => $valores2['identidad'],  	
-                1 => $valores2['nombre'],	
-	   );
-   }else{
-	   $datos = array(
-				0 => 'Error', 
-				1 => '', 
- 				2 => '',
-	    );	
-   }
-}else{
-	   $datos = array(
-				0 => 'Error1', 
-				1 => '', 
- 				2 => '',
-	    );		
+    $stmt = $mysqli->prepare(
+        "SELECT expediente, identidad, CONCAT(nombre, ' ', apellido) AS nombre
+         FROM pacientes
+         WHERE (CAST(expediente AS CHAR) = ? OR identidad = ?)
+           AND estado = 1
+         LIMIT 1"
+    );
+    if (!$stmt) throw new Exception($mysqli->error);
+    $stmt->bind_param('ss', $valor, $valor);
+    if (!$stmt->execute()) throw new Exception($stmt->error);
+
+    $resultado = $stmt->get_result();
+
+    if ($resultado->num_rows !== 1) {
+        echo json_encode(array('Error', '', ''), JSON_UNESCAPED_UNICODE);
+        exit;
+    }
+
+    $paciente = $resultado->fetch_assoc();
+
+    if ((int)$paciente['expediente'] === 0) {
+        echo json_encode(array('Error1', '', ''), JSON_UNESCAPED_UNICODE);
+        exit;
+    }
+
+    echo json_encode(array(
+        (string)$paciente['identidad'],
+        (string)$paciente['nombre']
+    ), JSON_UNESCAPED_UNICODE);
+} catch (Throwable $e) {
+    error_log('Error buscar_expediente.php: ' . $e->getMessage());
+    echo json_encode(array('Error', '', ''), JSON_UNESCAPED_UNICODE);
+} finally {
+    if ($stmt instanceof mysqli_stmt) $stmt->close();
+    if ($mysqli instanceof mysqli) $mysqli->close();
 }
-
-echo json_encode($datos);
-
-$result->free();//LIMPIAR RESULTADO
-$mysqli->close();//CERRAR CONEXIÓN
-?>

@@ -106,7 +106,7 @@ if ($colaborador_id != '' || $colaborador_id != null) {
             </div>
         </div>
     </div>
-    <!-- FIN MODAL BUSCAR ATENCIONES
+    <!-- FIN MODAL BUSCAR ATENCIONES -->
 
 <!--INICIO MODAL TRANSITO-->
     <div class="modal fade" id="registro_transito_eviada">
@@ -139,7 +139,7 @@ if ($colaborador_id != '' || $colaborador_id != null) {
                         </div>
                         <div class="form-row">
                             <div class="col-md-6 mb-3">
-                                <label for="paciente_te">Paciente <span class="priority">*<span /></label>
+                                <label for="paciente_te">Paciente <span class="priority">*</span></label>
                                 <div class="input-group mb-3">
                                     <select class="selectpicker" id="paciente_te" name="paciente_te"
                                         data-live-search="true" title="Paciente" data-width="100%" data-size="7">
@@ -147,7 +147,7 @@ if ($colaborador_id != '' || $colaborador_id != null) {
                                 </div>
                             </div>
                             <div class="col-md-6 mb-3">
-                                <label for="fecha">Fecha <span class="priority">*<span /></label>
+                                <label for="fecha">Fecha <span class="priority">*</span></label>
                                 <input type="date" required id="fecha" name="fecha" value="<?php echo date('Y-m-d'); ?>"
                                     class="form-control" />
                             </div>
@@ -159,7 +159,7 @@ if ($colaborador_id != '' || $colaborador_id != null) {
                                     class="form-control" />
                             </div>
                             <div class="col-md-6 mb-3">
-                                <label for="enviada">Enviada a <span class="priority">*<span /></label>
+                                <label for="enviada">Enviada a <span class="priority">*</span></label>
                                 <div class="input-group mb-3">
                                     <select class="selectpicker" id="enviada" name="enviada" data-live-search="true"
                                         title="Enviada a" data-width="100%" data-size="7">
@@ -169,7 +169,7 @@ if ($colaborador_id != '' || $colaborador_id != null) {
                         </div>
                         <div class="form-row">
                             <div class="col-md-12 mb-3">
-                                <label for="motivo">Motivo <span class="priority">*<span /></label>
+                                <label for="motivo">Motivo <span class="priority">*</span></label>
                                 <textarea id="motivo" name="motivo" required placeholder="Motivo de la Referencia"
                                     class="form-control" maxlength="255" rows="3"></textarea>
                                 <p id="charNumMotivoTE">255 Caracteres</p>
@@ -220,7 +220,7 @@ if ($colaborador_id != '' || $colaborador_id != null) {
                         </div>
                         <div class="form-row">
                             <div class="col-md-6 mb-3">
-                                <label for="paciente_tr">Paciente <span class="priority">*<span /></label>
+                                <label for="paciente_tr">Paciente <span class="priority">*</span></label>
                                 <div class="input-group mb-3">
                                     <select class="selectpicker" id="paciente_tr" name="paciente_tr"
                                         data-live-search="true" title="Paciente" data-width="100%" data-size="7">
@@ -228,7 +228,7 @@ if ($colaborador_id != '' || $colaborador_id != null) {
                                 </div>
                             </div>
                             <div class="col-md-6 mb-3">
-                                <label for="fecha">Fecha <span class="priority">*<span /></label>
+                                <label for="fecha">Fecha <span class="priority">*</span></label>
                                 <input type="date" required id="fecha" name="fecha" value="<?php echo date('Y-m-d'); ?>"
                                     class="form-control" />
                             </div>
@@ -240,7 +240,7 @@ if ($colaborador_id != '' || $colaborador_id != null) {
                                     class="form-control" />
                             </div>
                             <div class="col-md-6 mb-3">
-                                <label for="recibida">Recibida de <span class="priority">*<span /></label>
+                                <label for="recibida">Recibida de <span class="priority">*</span></label>
                                 <div class="input-group mb-3">
                                     <select class="selectpicker" id="recibida" name="recibida" data-live-search="true"
                                         title="Recibida de" data-width="100%" data-size="7">
@@ -250,7 +250,7 @@ if ($colaborador_id != '' || $colaborador_id != null) {
                         </div>
                         <div class="form-row">
                             <div class="col-md-12 mb-3">
-                                <label for="motivo">Motivo <span class="priority">*<span /></label>
+                                <label for="motivo">Motivo <span class="priority">*</span></label>
                                 <textarea id="motivo" name="motivo" required placeholder="Motivo de la Referencia"
                                     class="form-control" maxlength="255" rows="3"></textarea>
                                 <p id="charNumMotivoTE">255 Caracteres</p>
@@ -321,11 +321,12 @@ if ($colaborador_id != '' || $colaborador_id != null) {
                         autofocus class="form-control" size="40" />
                 </div>
                 <div class="form-group">
-                    <act class="form-group mr-1">
+                    <div class="form-group mr-1">
                         <button class="btn btn-primary ml-1" type="submit" id="nuevo_registro">
                             <div class="sb-nav-link-icon"></div><i class="fas fa-plus-circle fa-lg"></i> Generar
                             Atención
                         </button>
+                    </div>
                 </div>
 
                 <div class="form-group mr-1">
@@ -367,7 +368,7 @@ if ($colaborador_id != '' || $colaborador_id != null) {
                 <ul class="pagination justify-content-center" id="pagination-atenciones"></ul>
             </nav>
         </div>
-        <?php include ('templates/atencionMedica.php'); ?>
+        <?php include ('templates/atencionMedicaHorizontal.php'); ?>
         <?php include ('templates/factura.php'); ?>
         <?php include ('templates/footer.php'); ?>
         <?php include ('templates/footer_facturas.php'); ?>

@@ -1,4 +1,17 @@
 <script>
+function parseJsonSeguro(data, contexto) {
+    if (typeof data === 'object' && data !== null) {
+        return data;
+    }
+
+    try {
+        return JSON.parse(String(data).trim());
+    } catch (error) {
+        console.error('Respuesta inválida en ' + contexto + ':', data);
+        throw error;
+    }
+}
+
 $(document).ready(function() {
     $('#form_main #nuevo_registro').on('click', function(e) {
         e.preventDefault();
@@ -125,8 +138,6 @@ $(document).ready(function(e) {
     limpiarFormularioMain();
     evaluarRegistrosPendientes();
     getProfesionales();
-    evaluarRegistrosPendientes();
-    getProfesionales();
 });
 
 /*VERIFICAR LA EXISTENCIA DEL USUARIO (PACIENTE)*/
@@ -138,9 +149,10 @@ $(document).ready(function(e) {
             $.ajax({
                 type: 'POST',
                 url: url,
-                data: 'expediente=' + expediente,
+                dataType: 'json',
+                data: { expediente: expediente },
                 success: function(data) {
-                    var array = eval(data);
+                    var array = parseJsonSeguro(data, 'respuesta del servidor');
                     if (array[0] == "Error") {
                         swal({
                             title: "Error",
@@ -222,10 +234,17 @@ function pagination(partida) {
     $.ajax({
         type: 'POST',
         url: url,
-        data: 'partida=' + partida + '&dato=' + dato + '&unidad=' + unidad + '&fechai=' + fechai + '&fechaf=' +
-            fechaf + '&colaborador=' + colaborador,
+        dataType: 'json',
+        data: {
+            partida: partida,
+            dato: dato,
+            unidad: unidad,
+            fechai: fechai,
+            fechaf: fechaf,
+            colaborador: colaborador
+        },
         success: function(data) {
-            var array = eval(data);
+            var array = parseJsonSeguro(data, 'respuesta del servidor');
             $('#agrega-registros').html(array[0]);
             $('#pagination').html(array[1]);
         }
@@ -324,7 +343,7 @@ $(document).ready(function() {
             async: true,
             data: 'servicio=' + servicio_id,
             success: function(data) {
-                $('#formulario_agregar_preclinica #unidad').html(data);
+                $('#formulario_agregar_preclinica #unidad').html(data).selectpicker('refresh');
             }
         });
 
@@ -343,7 +362,7 @@ $(document).ready(function() {
             async: true,
             data: 'servicio=' + servicio_id + '&puesto_id=' + puesto_id,
             success: function(data) {
-                $('#formulario_agregar_preclinica #medico').html(data);
+                $('#formulario_agregar_preclinica #medico').html(data).selectpicker('refresh');
             }
         });
 
@@ -369,9 +388,10 @@ function editarRegistro(agenda_id, expediente) {
             $.ajax({
                 type: 'POST',
                 url: url,
-                data: 'id=' + agenda_id,
+                dataType: 'json',
+                data: { id: agenda_id },
                 success: function(valores) {
-                    var datos = eval(valores);
+                    var datos = parseJsonSeguro(valores, 'editar.php');
                     $('#formulario_agregar_preclinica')[0].reset();
                     $('#reg_preclinica').hide();
                     $('#edit_preclinica').show();
@@ -579,9 +599,9 @@ function convertDate(inputFormat) {
 }
 
 $(document).ready(function() {
-    setInterval('pagination(1)', 22000); //CADA 8 SEGUNDOS
-    setInterval('evaluarRegistrosPendientes()', 1800000); //CADA MEDIA HORA
-    setInterval('evaluarRegistrosPendientesEmailPreclinica()', 1800000); //CADA MEDIA HORA
+    setInterval(function() { pagination(1); }, 22000); //CADA 8 SEGUNDOS
+    setInterval(function() { evaluarRegistrosPendientes(); }, 1800000); //CADA MEDIA HORA
+    setInterval(function() { evaluarRegistrosPendientesEmailPreclinica(); }, 1800000); //CADA MEDIA HORA
 });
 
 function getMes(fecha) {
@@ -608,10 +628,11 @@ function evaluarRegistrosPendientes() {
 
     $.ajax({
         type: 'POST',
-        data: 'fecha=' + fecha,
+        dataType: 'json',
+        data: { fecha: fecha },
         url: url,
         success: function(valores) {
-            var datos = eval(valores);
+            var datos = parseJsonSeguro(valores, 'editar.php');
 
             if (datos[0] > 0) {
 
@@ -711,7 +732,7 @@ function getColaborador() {
         async: true,
         success: function(data) {
             $('#formulario_agregar_preclinica #medico').html("");
-            $('#formulario_agregar_preclinica #medico').html(data);
+            $('#formulario_agregar_preclinica #medico').html(data).selectpicker('refresh');
             $('#formulario_agregar_preclinica #medico').selectpicker('refresh');
         }
     });

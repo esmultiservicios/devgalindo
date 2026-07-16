@@ -1,231 +1,468 @@
 <?php
-session_start();   
+session_start();
 include "../funtions.php";
 
 set_include_path('../../fpdf/font');
-require('../../fpdf/fpdf.php');  
+require('../../fpdf/fpdf.php');
 
-//CONEXION A DB
-$mysqli = connect_mysqli();
+function textoPdf($texto)
+{
+    $texto = (string) $texto;
 
-header("Content-Type: text/html;charset=utf-8");
+    if ($texto === '') {
+        return '';
+    }
 
-$pdf = new FPDF('P','mm',array(80,170));
-#Establecemos los márgenes izquierda, arriba y derecha: 
-$pdf->SetMargins(6, 0.3 , 65); 
+    $convertido = iconv('UTF-8', 'Windows-1252//TRANSLIT//IGNORE', $texto);
 
-#Establecemos el margen inferior: 
-$pdf->SetAutoPageBreak(true,0.5);
-$pdf->AddPage();
-$pdf->Image('../../img/logo.png' , 11,2, 45 , 10,'PNG'); //float x , float y , float w , float h
-
-$pdf->Ln(12);
-
-//CONSULTA
-$agenda_id = $_GET['agenda_id'];
-
-//EVALUA EL CONTENIDO DE LA VARIABLE A BUSCAR
-//CONSULTA DATOS DE LA AGENDA
-$consulta_agenda = "SELECT usuario, DATE_FORMAT(CAST(fecha_cita AS DATE), '%d/%m/%Y') AS 'fecha_cita', CAST(fecha_cita AS DATE) AS 'fecha1', hora, DATE_FORMAT(fecha_registro, '%d/%m/%Y %h:%i:%s %p') AS 'fecha_registro', pacientes_id, colaborador_id, expediente, servicio_id, reprogramo 
-    FROM agenda 
-	WHERE agenda_id = '$agenda_id'";	
-$result = $mysqli->query($consulta_agenda);
-$consulta_agenda2 = $result->fetch_assoc();
-
-$pacientes_id = "";
-$colaborador_id  = "";
-$expediente  = "";
-$servicio_id  = "";
-$usuario_sistema = "";
-$fecha_registro = "";
-$reprogramo = "";
-$reprogramo_cita = "";
-$fecha_cita = "";
-$hora_cita = "";
-
-if($result->num_rows>0){
-	$pacientes_id = $consulta_agenda2['pacientes_id'];
-	$colaborador_id  = $consulta_agenda2['colaborador_id'];
-	$expediente  = $consulta_agenda2['expediente'];
-	$servicio_id  = $consulta_agenda2['servicio_id'];
-	$usuario_sistema = $consulta_agenda2['usuario'];
-	$fecha_registro = $consulta_agenda2['fecha_registro'];
-	$reprogramo = $consulta_agenda2['reprogramo'];
-    $fecha_cita = $consulta_agenda2['fecha_cita'];	
-	$hora_cita = $consulta_agenda2['hora'];
+    return $convertido !== false ? $convertido : $texto;
 }
 
-if($reprogramo == 1){
-	$reprogramo_cita = "(Reprogramación)";
-}else{
-	$reprogramo_cita = "";
+function cerrarSentencia($stmt)
+{
+    if ($stmt instanceof mysqli_stmt) {
+        $stmt->close();
+    }
 }
 
-if ($expediente == 0){
-	$exp = "TEMP"; 
-}else{
-	$exp = $expediente;
-}	
+$mysqli = null;
+$stmtAgenda = null;
+$stmtEmpresa = null;
+$stmtPaciente = null;
+$stmtMedico = null;
+$stmtPuesto = null;
+$stmtServicio = null;
+$stmtUsuarioSistema = null;
+$stmtTipoUsuario = null;
 
-//OBTENER NOMBRE DE EMPRESA
-$usuario = $_SESSION['colaborador_id'];	
+try {
+    if (!isset($_SESSION['colaborador_id']) || !is_numeric($_SESSION['colaborador_id'])) {
+        throw new Exception('La sesión del usuario no es válida. Inicie sesión nuevamente.');
+    }
 
-$query_empresa = "SELECT e.telefono AS 'telefono', e.celular AS 'celular', e.correo AS 'correo', e.eslogan AS 'eslogan', e.horario AS 'horario'
-FROM users AS u
-INNER JOIN empresa AS e
-ON u.empresa_id = e.empresa_id
-WHERE u.colaborador_id = '$usuario'";
-$result_empresa = $mysqli->query($query_empresa) or die($mysqli->error);;
-$consulta_empresa = $result_empresa->fetch_assoc();
+    if (!isset($_GET['agenda_id']) || trim((string) $_GET['agenda_id']) === '') {
+        throw new Exception('No se recibió el identificador de la cita.');
+    }
 
-$telefono = '';
-$celular = '';
-$telefono = '';
-$horario = '';
-$eslogan = '';
-$correo_empresa = 'admision@mentesanahn.com';
+    $agenda_id = filter_var($_GET['agenda_id'], FILTER_VALIDATE_INT);
 
-if($result_empresa->num_rows>0){
-   $telefono = $consulta_empresa['telefono'];
-   $celular = $consulta_empresa['celular'];
-   $correo = $consulta_empresa['correo'];   
-   $horario = $consulta_empresa['horario'];
-   $eslogan = $consulta_empresa['eslogan'];   
-}  
+    if ($agenda_id === false || $agenda_id <= 0) {
+        throw new Exception('El identificador de la cita no es válido.');
+    }
 
-//CONSULTA DATOS DEL USUARIO
-$consulta_usuario = "SELECT CONCAT(nombre,' ',apellido) AS 'nombre', identidad 
-    FROM pacientes 
-	WHERE pacientes_id = '$pacientes_id'";
-$result = $mysqli->query($consulta_usuario);
-$consulta_usuario2 = $result->fetch_assoc();
+    $usuario_actual = (int) $_SESSION['colaborador_id'];
 
-$nombre_usuario = "";
-$identidad_usuario = "";
-	
-if($result->num_rows>0){
-	$nombre_usuario = $consulta_usuario2['nombre'];
-	$identidad_usuario = $consulta_usuario2['identidad'];
+    $mysqli = connect_mysqli();
+
+    if (!$mysqli || $mysqli->connect_errno) {
+        throw new Exception('No se pudo establecer conexión con la base de datos.');
+    }
+
+    $mysqli->set_charset('utf8mb4');
+
+    /* ============================================================
+       CONSULTA DE LA AGENDA
+    ============================================================ */
+    $stmtAgenda = $mysqli->prepare(
+        "SELECT
+            usuario,
+            DATE_FORMAT(CAST(fecha_cita AS DATE), '%d/%m/%Y') AS fecha_cita,
+            CAST(fecha_cita AS DATE) AS fecha1,
+            hora,
+            DATE_FORMAT(fecha_registro, '%d/%m/%Y %h:%i:%s %p') AS fecha_registro,
+            pacientes_id,
+            colaborador_id,
+            expediente,
+            servicio_id,
+            reprogramo
+         FROM agenda
+         WHERE agenda_id = ?
+         LIMIT 1"
+    );
+
+    if (!$stmtAgenda) {
+        throw new Exception('No se pudo preparar la consulta de la cita: ' . $mysqli->error);
+    }
+
+    $stmtAgenda->bind_param('i', $agenda_id);
+
+    if (!$stmtAgenda->execute()) {
+        throw new Exception('No se pudo consultar la cita: ' . $stmtAgenda->error);
+    }
+
+    $resultadoAgenda = $stmtAgenda->get_result();
+
+    if ($resultadoAgenda->num_rows !== 1) {
+        throw new Exception('La cita solicitada no existe.');
+    }
+
+    $agenda = $resultadoAgenda->fetch_assoc();
+
+    $pacientes_id = (int) $agenda['pacientes_id'];
+    $colaborador_id = (int) $agenda['colaborador_id'];
+    $expediente = (int) $agenda['expediente'];
+    $servicio_id = (int) $agenda['servicio_id'];
+    $usuario_sistema = (int) $agenda['usuario'];
+    $fecha_registro = (string) $agenda['fecha_registro'];
+    $reprogramo = (int) $agenda['reprogramo'];
+    $fecha_cita = (string) $agenda['fecha_cita'];
+    $hora_cita = (string) $agenda['hora'];
+
+    $reprogramo_cita = $reprogramo === 1 ? '(Reprogramación)' : '';
+    $exp = $expediente === 0 ? 'TEMP' : (string) $expediente;
+
+    /* ============================================================
+       DATOS DE LA EMPRESA
+    ============================================================ */
+    $stmtEmpresa = $mysqli->prepare(
+        "SELECT
+            e.telefono,
+            e.celular,
+            e.correo,
+            e.eslogan,
+            e.horario
+         FROM users AS u
+         INNER JOIN empresa AS e
+            ON u.empresa_id = e.empresa_id
+         WHERE u.colaborador_id = ?
+         LIMIT 1"
+    );
+
+    if (!$stmtEmpresa) {
+        throw new Exception('No se pudo preparar la consulta de la empresa: ' . $mysqli->error);
+    }
+
+    $stmtEmpresa->bind_param('i', $usuario_actual);
+
+    if (!$stmtEmpresa->execute()) {
+        throw new Exception('No se pudo consultar la empresa: ' . $stmtEmpresa->error);
+    }
+
+    $resultadoEmpresa = $stmtEmpresa->get_result();
+
+    $telefono = '';
+    $celular = '';
+    $correo_empresa = 'admision@mentesanahn.com';
+    $horario = '';
+    $eslogan = '';
+
+    if ($resultadoEmpresa->num_rows > 0) {
+        $empresa = $resultadoEmpresa->fetch_assoc();
+
+        $telefono = (string) ($empresa['telefono'] ?? '');
+        $celular = (string) ($empresa['celular'] ?? '');
+        $correo_empresa = (string) ($empresa['correo'] ?? $correo_empresa);
+        $horario = (string) ($empresa['horario'] ?? '');
+        $eslogan = (string) ($empresa['eslogan'] ?? '');
+    }
+
+    /* ============================================================
+       DATOS DEL PACIENTE
+    ============================================================ */
+    $stmtPaciente = $mysqli->prepare(
+        "SELECT
+            CONCAT(nombre, ' ', apellido) AS nombre,
+            identidad
+         FROM pacientes
+         WHERE pacientes_id = ?
+         LIMIT 1"
+    );
+
+    if (!$stmtPaciente) {
+        throw new Exception('No se pudo preparar la consulta del paciente: ' . $mysqli->error);
+    }
+
+    $stmtPaciente->bind_param('i', $pacientes_id);
+
+    if (!$stmtPaciente->execute()) {
+        throw new Exception('No se pudo consultar el paciente: ' . $stmtPaciente->error);
+    }
+
+    $resultadoPaciente = $stmtPaciente->get_result();
+
+    $nombre_usuario = '';
+    $identidad_usuario = '';
+
+    if ($resultadoPaciente->num_rows > 0) {
+        $paciente = $resultadoPaciente->fetch_assoc();
+
+        $nombre_usuario = (string) ($paciente['nombre'] ?? '');
+        $identidad_usuario = (string) ($paciente['identidad'] ?? '');
+    }
+
+    /* ============================================================
+       DATOS DEL PROFESIONAL
+    ============================================================ */
+    $stmtMedico = $mysqli->prepare(
+        "SELECT
+            CONCAT(nombre, ' ', apellido) AS nombre,
+            puesto_id
+         FROM colaboradores
+         WHERE colaborador_id = ?
+         LIMIT 1"
+    );
+
+    if (!$stmtMedico) {
+        throw new Exception('No se pudo preparar la consulta del profesional: ' . $mysqli->error);
+    }
+
+    $stmtMedico->bind_param('i', $colaborador_id);
+
+    if (!$stmtMedico->execute()) {
+        throw new Exception('No se pudo consultar el profesional: ' . $stmtMedico->error);
+    }
+
+    $resultadoMedico = $stmtMedico->get_result();
+
+    $puesto_id = 0;
+    $nombre_medico = '';
+
+    if ($resultadoMedico->num_rows > 0) {
+        $medico = $resultadoMedico->fetch_assoc();
+
+        $puesto_id = (int) ($medico['puesto_id'] ?? 0);
+        $nombre_medico = (string) ($medico['nombre'] ?? '');
+    }
+
+    /* ============================================================
+       TIPO DE PROFESIONAL
+    ============================================================ */
+    $stmtPuesto = $mysqli->prepare(
+        "SELECT nombre, puesto_id
+         FROM puesto_colaboradores
+         WHERE puesto_id = ?
+         LIMIT 1"
+    );
+
+    if (!$stmtPuesto) {
+        throw new Exception('No se pudo preparar la consulta del puesto: ' . $mysqli->error);
+    }
+
+    $stmtPuesto->bind_param('i', $puesto_id);
+
+    if (!$stmtPuesto->execute()) {
+        throw new Exception('No se pudo consultar el puesto: ' . $stmtPuesto->error);
+    }
+
+    $resultadoPuesto = $stmtPuesto->get_result();
+
+    $puesto = '';
+    $consultar_colaborador = 0;
+
+    if ($resultadoPuesto->num_rows > 0) {
+        $puestoDatos = $resultadoPuesto->fetch_assoc();
+
+        $puesto = trim((string) ($puestoDatos['nombre'] ?? ''));
+        $consultar_colaborador = (int) ($puestoDatos['puesto_id'] ?? 0);
+    }
+
+    /* ============================================================
+       SERVICIO
+    ============================================================ */
+    $stmtServicio = $mysqli->prepare(
+        "SELECT nombre
+         FROM servicios
+         WHERE servicio_id = ?
+         LIMIT 1"
+    );
+
+    if (!$stmtServicio) {
+        throw new Exception('No se pudo preparar la consulta del servicio: ' . $mysqli->error);
+    }
+
+    $stmtServicio->bind_param('i', $servicio_id);
+
+    if (!$stmtServicio->execute()) {
+        throw new Exception('No se pudo consultar el servicio: ' . $stmtServicio->error);
+    }
+
+    $resultadoServicio = $stmtServicio->get_result();
+
+    $servicio = '';
+
+    if ($resultadoServicio->num_rows > 0) {
+        $servicioDatos = $resultadoServicio->fetch_assoc();
+        $servicio = trim((string) ($servicioDatos['nombre'] ?? ''));
+    }
+
+    /* ============================================================
+       USUARIO QUE REGISTRÓ LA CITA
+    ============================================================ */
+    $stmtUsuarioSistema = $mysqli->prepare(
+        "SELECT CONCAT(nombre, ' ', apellido) AS nombre
+         FROM colaboradores
+         WHERE colaborador_id = ?
+         LIMIT 1"
+    );
+
+    if (!$stmtUsuarioSistema) {
+        throw new Exception('No se pudo preparar la consulta del usuario: ' . $mysqli->error);
+    }
+
+    $stmtUsuarioSistema->bind_param('i', $usuario_sistema);
+
+    if (!$stmtUsuarioSistema->execute()) {
+        throw new Exception('No se pudo consultar el usuario: ' . $stmtUsuarioSistema->error);
+    }
+
+    $resultadoUsuarioSistema = $stmtUsuarioSistema->get_result();
+
+    $usuario_sistema_nombre = '';
+
+    if ($resultadoUsuarioSistema->num_rows > 0) {
+        $usuarioSistemaDatos = $resultadoUsuarioSistema->fetch_assoc();
+        $usuario_sistema_nombre = trim((string) ($usuarioSistemaDatos['nombre'] ?? ''));
+    }
+
+    /* ============================================================
+       DETERMINAR SI ES NUEVO O SUBSIGUIENTE
+    ============================================================ */
+    $stmtTipoUsuario = $mysqli->prepare(
+        "SELECT a.agenda_id
+         FROM agenda AS a
+         INNER JOIN colaboradores AS c
+            ON a.colaborador_id = c.colaborador_id
+         WHERE a.pacientes_id = ?
+           AND a.servicio_id = ?
+           AND c.puesto_id = ?
+           AND a.status = 1
+         LIMIT 1"
+    );
+
+    if (!$stmtTipoUsuario) {
+        throw new Exception('No se pudo preparar la validación del tipo de paciente: ' . $mysqli->error);
+    }
+
+    $stmtTipoUsuario->bind_param(
+        'iii',
+        $pacientes_id,
+        $servicio_id,
+        $consultar_colaborador
+    );
+
+    if (!$stmtTipoUsuario->execute()) {
+        throw new Exception('No se pudo determinar el tipo de paciente: ' . $stmtTipoUsuario->error);
+    }
+
+    $resultadoTipoUsuario = $stmtTipoUsuario->get_result();
+    $tipo_usuario = $resultadoTipoUsuario->num_rows > 0 ? 'Subsiguiente' : 'Nuevo';
+
+    $hora = date('g:i a', strtotime($hora_cita));
+
+    /* ============================================================
+       CREACIÓN DEL PDF
+    ============================================================ */
+    $pdf = new FPDF('P', 'mm', array(80, 170));
+    $pdf->SetMargins(6, 0.3, 6);
+    $pdf->SetAutoPageBreak(true, 0.5);
+    $pdf->AddPage();
+
+    $rutaLogo = '../../img/logo.png';
+
+    if (is_file($rutaLogo)) {
+        $pdf->Image($rutaLogo, 11, 2, 45, 10, 'PNG');
+    }
+
+    $pdf->Ln(12);
+
+    $pdf->SetFont('helvetica', '', 9);
+    $pdf->Cell(68, 5, textoPdf('Cita N°: ' . $agenda_id), 0, 1);
+
+    $pdf->SetFont('helvetica', 'B', 9);
+    $pdf->Cell(68, 5, textoPdf('Fecha Cita: ' . $fecha_cita . ' Hora: ' . $hora), 0, 1);
+
+    $pdf->SetFont('helvetica', '', 9);
+    $pdf->Cell(68, 5, textoPdf('Tipo de Cita: ' . $tipo_usuario . ' ' . $reprogramo_cita), 0, 1);
+    $pdf->Cell(68, 5, textoPdf('Nombre: ' . $nombre_usuario), 0, 1);
+    $pdf->Cell(68, 5, textoPdf('Identidad: ' . $identidad_usuario . '  Exp: ' . $exp), 0, 1);
+    $pdf->Cell(68, 5, textoPdf('Profesional: ' . $nombre_medico), 0, 1);
+    $pdf->Cell(68, 5, textoPdf('Servicio: ' . $servicio), 0, 1);
+    $pdf->Cell(68, 5, textoPdf('Especialidad: ' . $puesto), 0, 1);
+    $pdf->Cell(68, 5, textoPdf('Usuario: ' . $usuario_sistema_nombre), 0, 1);
+
+    $pdf->Ln(3);
+    $pdf->SetFont('helvetica', 'B', 8);
+    $pdf->Cell(68, 5, textoPdf('Nota:'), 0, 1);
+
+    $pdf->SetFont('helvetica', '', 8);
+    $pdf->MultiCell(
+        68,
+        4,
+        textoPdf(
+            "Por favor estar 15 minutos antes de su cita.\n" .
+            "Tomando las medidas de bioseguridad.\n" .
+            $eslogan
+        ),
+        0,
+        'L'
+    );
+
+    $pdf->Ln(5);
+    $pdf->SetFont('helvetica', '', 8);
+    $pdf->Cell(68, 4, '__________________________', 0, 1, 'C');
+    $pdf->Cell(68, 4, textoPdf('Firma y Sello'), 0, 1, 'C');
+
+    $pdf->Ln(3);
+    $pdf->Cell(68, 4, textoPdf('Nos puede llamar al siguiente número'), 0, 1);
+
+    $pdf->SetFont('helvetica', 'B', 8);
+    $pdf->Cell(68, 4, textoPdf('PBX: ' . $telefono), 0, 1);
+
+    $pdf->Ln(3);
+    $pdf->SetFont('helvetica', 'B', 9);
+    $pdf->MultiCell(
+        68,
+        4,
+        textoPdf('Fecha Registro: ' . $fecha_registro),
+        0,
+        'L'
+    );
+
+    cerrarSentencia($stmtAgenda);
+    cerrarSentencia($stmtEmpresa);
+    cerrarSentencia($stmtPaciente);
+    cerrarSentencia($stmtMedico);
+    cerrarSentencia($stmtPuesto);
+    cerrarSentencia($stmtServicio);
+    cerrarSentencia($stmtUsuarioSistema);
+    cerrarSentencia($stmtTipoUsuario);
+
+    $mysqli->close();
+    $mysqli = null;
+
+    /*
+     * No debe existir ninguna salida antes de FPDF.
+     * Se limpia cualquier búfer accidental para evitar:
+     * "Some data has already been output, can't send PDF file".
+     */
+    while (ob_get_level() > 0) {
+        ob_end_clean();
+    }
+
+    $pdf->Output('I', 'Citas.pdf');
+    exit;
+} catch (Throwable $e) {
+    cerrarSentencia($stmtAgenda);
+    cerrarSentencia($stmtEmpresa);
+    cerrarSentencia($stmtPaciente);
+    cerrarSentencia($stmtMedico);
+    cerrarSentencia($stmtPuesto);
+    cerrarSentencia($stmtServicio);
+    cerrarSentencia($stmtUsuarioSistema);
+    cerrarSentencia($stmtTipoUsuario);
+
+    if ($mysqli instanceof mysqli) {
+        $mysqli->close();
+    }
+
+    error_log('Error al generar ticket de cita: ' . $e->getMessage());
+
+    while (ob_get_level() > 0) {
+        ob_end_clean();
+    }
+
+    http_response_code(500);
+    header('Content-Type: text/plain; charset=utf-8');
+    echo 'No se pudo generar el ticket de la cita. ' . $e->getMessage();
+    exit;
 }
-//CONSULTA DATOS DEL MEDICO
-$consulta_medico = "SELECT CONCAT(nombre,' ',apellido) AS 'nombre', puesto_id 
-   FROM colaboradores 
-   WHERE colaborador_id = '$colaborador_id'";
-$result = $mysqli->query($consulta_medico);
-$consulta_medico2 = $result->fetch_assoc();
-
-$puesto_id  = "";
-$nombre_medico = "";
-
-if($result->num_rows>0){
-	$puesto_id  = $consulta_medico2['puesto_id'];
-	$nombre_medico = $consulta_medico2['nombre'];
-}
-//CONSULTAR TIPO MEDICO
-$consulta_tipo_medico = "SELECT nombre, puesto_id 
-    FROM puesto_colaboradores 
-	WHERE puesto_id = '$puesto_id'";
-$result = $mysqli->query($consulta_tipo_medico);
-$consulta_tipo_medico2 = $result->fetch_assoc();
-$puesto  = cleanStringStrtolower($consulta_tipo_medico2['nombre']);
-
-$consultar_colaborador = "";
-
-if($result->num_rows>0){
-	$consultar_colaborador = $consulta_tipo_medico2['puesto_id'];
-}
-//CONSULTAR SERVICIO
-$consulta_servicio = "SELECT nombre 
-    FROM servicios 
-	WHERE servicio_id = '$servicio_id'";
-$result = $mysqli->query($consulta_servicio);
-$consulta_servicio2 = $result->fetch_assoc();
-$servicio  = "";
-
-if($result->num_rows>0){
-	$servicio  = trim(ucwords(strtolower($consulta_servicio2['nombre']), " "));
-}
-//CONSULTAR NOMBRE DE USUARIO DEL SISTEMA
-$consulta_usuario_sistema = "SELECT CONCAT(nombre,' ',apellido) AS 'nombre' 
-     FROM colaboradores 
-	 WHERE colaborador_id = '$usuario_sistema'";
-$result = $mysqli->query($consulta_usuario_sistema);
-$consulta_usuario_sistema2 = $result->fetch_assoc();	
-$usuario_sistema_nombre  = "";
-
-if($result->num_rows>0){
-	$usuario_sistema_nombre  = trim(ucwords(strtolower($consulta_usuario_sistema2['nombre']), " "));
-}
-//CONOCER EL TIPO DE USUARIO
-$consultar_expediente = "SELECT a.agenda_id AS 'agenda_id'
-    FROM agenda AS a
-    INNER JOIN colaboradores AS c
-	ON a.colaborador_id = c.colaborador_id
-    WHERE pacientes_id = '$pacientes_id' AND a.servicio_id = '$servicio_id' AND c.puesto_id = '$consultar_colaborador' AND a.status = 1";
-$result = $mysqli->query($consultar_expediente);	
-$consultar_expediente1 = $result->fetch_assoc();
-
-$usuario = "";  
-
-if($result->num_rows>0)
-	$usuario = 'Subsiguiente'; 
-else
-	$usuario = 'Nuevo';
-
-$hora = date('g:i a',strtotime($hora_cita));	
-
-//ENCABEZADO DEL CONTENIDO DEL REPORTE
-$pdf->SetFont('helvetica', '', 9);
-$pdf->Cell(8, 3, utf8_decode('Cita N°:').' '.$agenda_id.'', 0);
-$pdf->Ln(1);
-$pdf->SetFont('helvetica', 'B', 9);
-$pdf->Cell(8, 8, 'Fecha Cita: '.$fecha_cita.' Hora: '.$hora, 0);
-$pdf->Ln(1);
-$pdf->SetFont('helvetica', '', 9);
-$pdf->Cell(8, 14, 'Tipo de Cita: '. $usuario.' '.utf8_decode($reprogramo_cita), 0);
-$pdf->Ln(1);
-$pdf->Cell(8, 20, 'Nombre: '.utf8_decode($nombre_usuario), 0);
-$pdf->Ln(1);
-$pdf->Cell(8, 26, 'Identidad: '.$identidad_usuario.'  Exp: '.$exp, 0);
-$pdf->Ln(1);
-$pdf->Cell(8, 32, utf8_decode('Profesional:').' '.utf8_decode($nombre_medico), 0);
-$pdf->Ln(1);
-$pdf->Cell(8, 37, 'Servicio: '.utf8_decode($servicio), 0);
-$pdf->Ln(1);
-$pdf->Cell(8, 43, 'Especialidad: '.utf8_decode($puesto), 0);
-$pdf->Ln(1);
-$pdf->Cell(8, 49, 'Usuario: '.utf8_decode($usuario_sistema_nombre), 0);
-
-//LLENA EL CUEROP DEL REPORTE			  
-$pdf->Ln(7);
-$pdf->SetFont('helvetica', 'B', 8);
-$pdf->Cell(8, 45, utf8_decode('Nota:'), 0);
-$pdf->Ln(3);
-$pdf->SetFont('helvetica', '', 8);
-$pdf->Cell(8,47,utf8_decode("Por favor estar 15 minutos antes de su cita"), 0);
-$pdf->Ln(3);
-$pdf->Cell(8,49,utf8_decode("Tomando las medidas de bioseguridad"), 0);
-$pdf->Ln(3);
-$pdf->Cell(8,52,utf8_decode($eslogan), 0);
-$pdf->Ln(3);
-
-$pdf->SetFont('helvetica', '', 8);
-$pdf->Ln(3);
-$pdf->Cell(8,97,utf8_decode("__________________________"), 0);
-$pdf->Ln(2);
-$pdf->Cell(8,99,utf8_decode("Firma y Sello"), 0);
-$pdf->Ln(2);
-$pdf->Cell(8,101,utf8_decode("Nos puede llamar al siguiente número"), 0);
-$pdf->Ln(2);
-$pdf->SetFont('helvetica', 'B', 8);
-$pdf->Cell(8,104,utf8_decode  ("PBX: ".$telefono), 0);
-
-$pdf->Ln(3);
-$pdf->SetFont('helvetica', 'B', 9);
-$pdf->Cell(8,106,'Fecha Registro: '.$fecha_registro, 0);
-
-$pdf->Output('Citas.pdf','I');
-
-$result->free();//LIMPIAR RESULTADO
-$mysqli->close();//CERRAR CONEXIÓN
-?>

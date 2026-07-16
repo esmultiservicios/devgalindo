@@ -50,6 +50,160 @@
   }
 
   // ============================
+  // Navegación interna y protección de datos de factura
+  // ============================
+  var vistaAnteriorFactura = 'main';
+  var snapshotFactura = '';
+  var navegacionConfirmada = false;
+
+  function serializarFactura() {
+    var $form = $('#formulario_facturacion');
+
+    if (!$form.length) {
+      return '';
+    }
+
+    var datos = $form.serializeArray().map(function (item) {
+      return item.name + '=' + item.value;
+    }).join('&');
+
+    var filasConDatos = 0;
+
+    $form.find('tbody tr, .table tbody tr').each(function () {
+      var tieneDato = false;
+
+      $(this).find('input, select, textarea').each(function () {
+        var valor = $(this).val();
+
+        if (valor !== null && String(valor).trim() !== '' && String(valor).trim() !== '0') {
+          tieneDato = true;
+        }
+      });
+
+      if (tieneDato) {
+        filasConDatos++;
+      }
+    });
+
+    return datos + '|filas=' + filasConDatos;
+  }
+
+  function guardarSnapshotFactura() {
+    snapshotFactura = serializarFactura();
+  }
+
+  function facturaTieneCambios() {
+    if (!$('#facturacion').is(':visible')) {
+      return false;
+    }
+
+    return serializarFactura() !== snapshotFactura;
+  }
+
+  function mostrarVistaPrincipal() {
+    // Ocultar vistas secundarias y volver siempre al listado principal.
+    $('#facturacion').hide();
+    $('#atencionMedica').hide();
+    $('#main_facturacion').show();
+
+    // Limpiar la atención que ya fue registrada para no dejar datos anteriores.
+    if ($('#formulario_atenciones').length) {
+      $('#formulario_atenciones')[0].reset();
+      $('#formulario_atenciones #pro').val('Registro');
+      $('#formulario_atenciones #pacientes_id').val('');
+      $('#formulario_atenciones #agenda_id').val('');
+      $('#formulario_atenciones #paciente_consulta').prop('disabled', false).selectpicker('refresh');
+      $('#formulario_atenciones #servicio_id').prop('disabled', false).selectpicker('refresh');
+    }
+
+    // Detener cualquier dictado que haya quedado activo.
+    if (window.__SPEECH_STATE__ && window.__SPEECH_STATE__.recognitions) {
+      Object.keys(window.__SPEECH_STATE__.recognitions).forEach(function (campo) {
+        var item = window.__SPEECH_STATE__.recognitions[campo];
+
+        if (item && item.recognition) {
+          try {
+            item.recognition.stop();
+          } catch (error) {
+            // No hacer nada si el reconocimiento ya estaba detenido.
+          }
+
+          item.running = false;
+        }
+
+        $('#formulario_atenciones #search_' + campo + '_stop').hide();
+        $('#formulario_atenciones #search_' + campo + '_start').show();
+      });
+
+      window.__SPEECH_STATE__.activeCampo = null;
+    }
+
+    $('#acciones_atras').addClass('active');
+    $('#acciones_factura').removeClass('active');
+    $('#label_acciones_factura').html('');
+
+    $('.footer').show();
+    $('.footer1').hide();
+
+    // Volver a consultar las atenciones para mostrar inmediatamente
+    // el estado actualizado del registro recién guardado.
+    pagination(1);
+  }
+
+  function mostrarVistaAtencionPreservandoDatos() {
+    $('#facturacion').hide();
+    $('#main_facturacion').hide();
+    $('#atencionMedica').show();
+
+    $('#acciones_atras').removeClass('active');
+    $('#acciones_factura').addClass('active');
+    $('#label_acciones_factura').html('Historia Clínica');
+
+    $('.footer').show();
+    $('.footer1').hide();
+
+    inicializarContadores(limites);
+    inicializarSpeechRecognition(limites);
+  }
+
+  function ejecutarRegresoDesdeFactura() {
+    // Desde una factura siempre se regresa al listado principal de atenciones.
+    // La atención ya fue guardada, por lo que no se debe volver al formulario
+    // con los datos anteriores.
+    mostrarVistaPrincipal();
+  }
+
+  function solicitarRegresoDesdeFactura() {
+    if (!facturaTieneCambios()) {
+      ejecutarRegresoDesdeFactura();
+      return;
+    }
+
+    swal({
+      title: 'Datos sin guardar',
+      text: 'La factura contiene información sin guardar. Si regresa, esos datos se perderán.',
+      icon: 'warning',
+      buttons: {
+        cancel: {
+          text: 'Permanecer aquí',
+          visible: true
+        },
+        confirm: {
+          text: 'Salir y perder los datos'
+        }
+      },
+      dangerMode: true,
+      closeOnEsc: false,
+      closeOnClickOutside: false
+    }).then(function (salir) {
+      if (salir === true) {
+        navegacionConfirmada = true;
+        ejecutarRegresoDesdeFactura();
+      }
+    });
+  }
+
+  // ============================
   // Definir los límites de caracteres globalmente (igual que tu código)
   // ============================
   var limites = {
@@ -114,6 +268,30 @@
 
     // ---- Llamada agrupada (tuya)
     funcionesFormPacientes();
+
+    // Breadcrumb: permite volver desde Historia Clínica o Factura
+    $(document)
+      .off('click.atencionNavegacion', '#ancla_volver, #acciones_atras')
+      .on('click.atencionNavegacion', '#ancla_volver, #acciones_atras', function (e) {
+        e.preventDefault();
+
+        if ($('#facturacion').is(':visible')) {
+          solicitarRegresoDesdeFactura();
+          return false;
+        }
+
+        mostrarVistaPrincipal();
+        return false;
+      });
+
+    // Advierte también al cerrar o recargar el navegador con una factura incompleta.
+    $(window)
+      .off('beforeunload.atencionFactura')
+      .on('beforeunload.atencionFactura', function () {
+        if (!navegacionConfirmada && facturaTieneCambios()) {
+          return 'La factura contiene información sin guardar.';
+        }
+      });
 
     // ============================
     // ✅ EVENTOS - TODOS NAMESPACED
@@ -186,31 +364,43 @@
         data: formData,
         processData: false,
         contentType: false,
-        success: (respuesta) => {
-          try {
-            respuesta = parseServerPayload(respuesta, "agregar.php");
-
-            showFactura(respuesta.atencion_id);
-
+        dataType: 'json',
+        success: function (respuesta) {
+          if (!respuesta || respuesta.status !== 'success') {
             swal({
-              title: respuesta.title,
-              text: respuesta.message,
-              icon: respuesta.type,
-              closeOnEsc: false,
-              closeOnClickOutside: false
-            });
-
-          } catch (e) {
-            console.error(e);
-            swal({
-              title: "Error",
-              text: "La respuesta del servidor no vino en formato válido. Revisá Network > Response.",
-              icon: "error",
+              title: respuesta && respuesta.title ? respuesta.title : 'Error',
+              text: respuesta && respuesta.message ? respuesta.message : 'No se pudo registrar la atención.',
+              icon: respuesta && respuesta.type ? respuesta.type : 'error',
               dangerMode: true,
               closeOnEsc: false,
               closeOnClickOutside: false
             });
+            return;
           }
+
+          swal({
+            title: respuesta.title,
+            text: respuesta.message,
+            icon: respuesta.type,
+            closeOnEsc: false,
+            closeOnClickOutside: false
+          }).then(function () {
+            showFactura(respuesta.atencion_id);
+          });
+        },
+        error: function (xhr, textStatus, errorThrown) {
+          var respuesta = xhr.responseJSON;
+
+          swal({
+            title: respuesta && respuesta.title ? respuesta.title : 'Error',
+            text: respuesta && respuesta.message
+              ? respuesta.message
+              : (xhr.responseText || errorThrown || textStatus || 'No se pudo registrar la atención.'),
+            icon: 'error',
+            dangerMode: true,
+            closeOnEsc: false,
+            closeOnClickOutside: false
+          });
         }
       });
     });
@@ -242,31 +432,43 @@
         data: formData,
         processData: false,
         contentType: false,
-        success: (respuesta) => {
-          try {
-            respuesta = parseServerPayload(respuesta, "agregarRegistro.php");
-
-            showFactura(respuesta.atencion_id);
-
+        dataType: 'json',
+        success: function (respuesta) {
+          if (!respuesta || respuesta.status !== 'success') {
             swal({
-              title: respuesta.title,
-              text: respuesta.message,
-              icon: respuesta.type,
-              closeOnEsc: false,
-              closeOnClickOutside: false
-            });
-
-          } catch (e) {
-            console.error(e);
-            swal({
-              title: "Error",
-              text: "La respuesta del servidor no vino en formato válido. Revisá Network > Response.",
-              icon: "error",
+              title: respuesta && respuesta.title ? respuesta.title : 'Error',
+              text: respuesta && respuesta.message ? respuesta.message : 'No se pudo registrar la atención desde la agenda.',
+              icon: respuesta && respuesta.type ? respuesta.type : 'error',
               dangerMode: true,
               closeOnEsc: false,
               closeOnClickOutside: false
             });
+            return;
           }
+
+          swal({
+            title: respuesta.title,
+            text: respuesta.message,
+            icon: respuesta.type,
+            closeOnEsc: false,
+            closeOnClickOutside: false
+          }).then(function () {
+            showFactura(respuesta.atencion_id);
+          });
+        },
+        error: function (xhr, textStatus, errorThrown) {
+          var respuesta = xhr.responseJSON;
+
+          swal({
+            title: respuesta && respuesta.title ? respuesta.title : 'Error',
+            text: respuesta && respuesta.message
+              ? respuesta.message
+              : (xhr.responseText || errorThrown || textStatus || 'No se pudo registrar la atención desde la agenda.'),
+            icon: 'error',
+            dangerMode: true,
+            closeOnEsc: false,
+            closeOnClickOutside: false
+          });
         }
       });
     });
@@ -580,12 +782,12 @@
               $('#formulario_atenciones #nombre').val(array[1]);
               $('#formulario_atenciones #edad').val(array[2]);
               $('#formulario_atenciones #procedencia').val(array[3]);
-              $('#formulario_atenciones #religion_id').val(array[4]);
+              $('#formulario_atenciones #religion_id').val(array[4]).selectpicker('refresh');
 
               $('#formulario_atenciones #telefono1').val(array[30]);
 
-              $('#formulario_atenciones #profesion').val(array[5]);
-              $('#formulario_atenciones #estado_civil').val(array[13]);
+              $('#formulario_atenciones #profesion_id').val(array[5]).selectpicker('refresh');
+              $('#formulario_atenciones #estado_civil').val(array[13]).selectpicker('refresh');
               $('#formulario_atenciones #paciente_consulta').val(array[6]);
 
               $('#formulario_atenciones #antecedentes_medicos_no_psiquiatricos').val(array[7]);
@@ -752,6 +954,9 @@
 
           limpiarTabla();
 
+          vistaAnteriorFactura = 'atencion';
+          navegacionConfirmada = false;
+
           $('#main_facturacion').hide();
           $('#atencionMedica').hide();
           $('#facturacion').show();
@@ -766,6 +971,10 @@
           $('.footer1').show();
 
           cleanFooterValueBill();
+
+          // Se toma la fotografía inicial después de cargar paciente,
+          // profesional, servicio y limpiar el detalle.
+          setTimeout(guardarSnapshotFactura, 0);
 
         } catch (e) {
           console.error(e);
@@ -824,8 +1033,8 @@
               $('#formulario_atenciones #edad').val(array[2]);
 
               $('#formulario_atenciones #procedencia').val(array[3]);
-              $('#formulario_atenciones #religion_id').val(array[4]);
-              $('#formulario_atenciones #profesion').val(array[5]);
+              $('#formulario_atenciones #religion_id').val(array[4]).selectpicker('refresh');
+              $('#formulario_atenciones #profesion_id').val(array[5]).selectpicker('refresh');
 
               $('#formulario_atenciones #paciente_consulta').val(array[6]).selectpicker('refresh');
 
@@ -835,7 +1044,7 @@
               $('#formulario_atenciones #seguimiento_read').val(array[13]);
               $('#formulario_atenciones #servicio_id').val(array[14]).selectpicker('refresh');
 
-              $('#formulario_atenciones #estado_civil').val(array[15]);
+              $('#formulario_atenciones #estado_civil').val(array[15]).selectpicker('refresh');
               $('#formulario_atenciones #num_hijos').val(array[16]);
 
               $('#formulario_atenciones #escolaridad').val(array[17]).selectpicker('refresh');
@@ -844,7 +1053,7 @@
               $('#formulario_atenciones #terapeuta_actual').val(array[19]);
 
               $('#formulario_atenciones #antecedentes_medicos_no_psiquiatricos').val(array[9]);
-              $('#formulario_atenciones #hospitaliaciones').val(array[10]);
+              $('#formulario_atenciones #hospitalizaciones').val(array[10]);
               $('#formulario_atenciones #cirugias').val(array[11]);
 
               $('#formulario_atenciones #alergias').val(array[12]);
@@ -875,7 +1084,7 @@
               inicializarContadores(limites);
               inicializarSpeechRecognition(limites);
 
-              FormAtencionMedica();
+              FormAtencionMedica(true);
               return false;
 
             } catch (e) {
@@ -1043,122 +1252,161 @@
   };
 
   // ============================
-  // ✅ DICTADO POR VOZ (arreglado)
-  // ============================
-  window.inicializarSpeechRecognition = function (limites) {
-    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SR) {
-      console.warn("SpeechRecognition no disponible en este navegador.");
-      return;
+// ✅ DICTADO POR VOZ (MISMO TUYO, FIX EDGE)
+// ============================
+window.inicializarSpeechRecognition = function (limites) {
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) {
+    console.warn("SpeechRecognition no disponible en este navegador.");
+    return;
+  }
+  if (location.protocol !== 'https:' && location.hostname !== 'localhost') {
+    console.warn("SpeechRecognition suele requerir HTTPS.");
+    return;
+  }
+
+  // Evitar duplicar handlers y recognitions
+  if (!window.__SPEECH_STATE__) window.__SPEECH_STATE__ = { recognitions: {}, activeCampo: null };
+
+  // Estado visual inicial: únicamente se muestra el botón de grabar.
+  $('#formulario_atenciones [id^="search_"][id$="_stop"]').hide();
+  $('#formulario_atenciones [id^="search_"][id$="_start"]').show();
+
+  const isEdge = /Edg\//.test(navigator.userAgent);
+
+  Object.keys(limites).forEach(function (campo) {
+
+    const $start = $('#formulario_atenciones #search_' + campo + '_start');
+    const $stop  = $('#formulario_atenciones #search_' + campo + '_stop'); // puede no existir
+
+    // ✅ Antes: si faltaba stop, no funcionaba. Ahora: con que exista start basta.
+    if (!$start.length) return;
+
+    // Si existe stop, lo ocultamos; si no existe, no pasa nada.
+    if ($stop.length) $stop.hide();
+
+    // si ya existía recognition de este campo, la detenemos y la reemplazamos
+    if (window.__SPEECH_STATE__.recognitions[campo]) {
+      try { window.__SPEECH_STATE__.recognitions[campo].recognition.stop(); } catch (_) {}
     }
-    if (location.protocol !== 'https:' && location.hostname !== 'localhost') {
-      console.warn("SpeechRecognition suele requerir HTTPS.");
-      return;
-    }
 
-    // Evitar duplicar handlers y recognitions
-    if (!window.__SPEECH_STATE__) window.__SPEECH_STATE__ = { recognitions: {}, activeCampo: null };
+    const recognition = new SR();
+    recognition.continuous = true;
+    recognition.interimResults = false;
 
-    Object.keys(limites).forEach(function (campo) {
+    // ✅ Edge suele fallar con "es" -> usar "es-ES"
+    recognition.lang = "es-ES";
 
-      const $start = $('#formulario_atenciones #search_' + campo + '_start');
-      const $stop  = $('#formulario_atenciones #search_' + campo + '_stop');
+    window.__SPEECH_STATE__.recognitions[campo] = { recognition, running: false };
 
-      if (!$start.length || !$stop.length) return;
+    function stopCampo(c) {
+      const item = window.__SPEECH_STATE__.recognitions[c];
+      if (!item) return;
+      try { item.recognition.stop(); } catch (_) {}
+      item.running = false;
 
-      $stop.hide();
-
-      // si ya existía recognition de este campo, la detenemos y la reemplazamos
-      if (window.__SPEECH_STATE__.recognitions[campo]) {
-        try { window.__SPEECH_STATE__.recognitions[campo].recognition.stop(); } catch (_) {}
-      }
-
-      const recognition = new SR();
-      recognition.continuous = true;
-      recognition.interimResults = false;
-      recognition.lang = "es";
-
-      window.__SPEECH_STATE__.recognitions[campo] = { recognition, running: false };
-
-      function stopCampo(c) {
-        const item = window.__SPEECH_STATE__.recognitions[c];
-        if (!item) return;
-        try { item.recognition.stop(); } catch (_) {}
-        item.running = false;
+      // UI: si existe stop, se alterna como antes
+      if ($('#formulario_atenciones #search_' + c + '_stop').length) {
         $('#formulario_atenciones #search_' + c + '_stop').hide();
         $('#formulario_atenciones #search_' + c + '_start').show();
+      } else {
+        // Si solo hay un botón, lo dejamos visible
+        $('#formulario_atenciones #search_' + c + '_start').show();
+      }
+    }
+
+    $start.off('click.speech').on('click.speech', async function (event) {
+      event.preventDefault();
+
+      // Si NO existe stop, este mismo botón funciona como toggle (start/stop)
+      if (!$stop.length && window.__SPEECH_STATE__.recognitions[campo].running) {
+        stopCampo(campo);
+        if (window.__SPEECH_STATE__.activeCampo === campo) window.__SPEECH_STATE__.activeCampo = null;
+        return false;
       }
 
-      $start.off('click.speech').on('click.speech', function (event) {
-        event.preventDefault();
+      // detener otro campo si está activo
+      if (window.__SPEECH_STATE__.activeCampo && window.__SPEECH_STATE__.activeCampo !== campo) {
+        stopCampo(window.__SPEECH_STATE__.activeCampo);
+      }
 
-        // detener otro campo si está activo
-        if (window.__SPEECH_STATE__.activeCampo && window.__SPEECH_STATE__.activeCampo !== campo) {
-          stopCampo(window.__SPEECH_STATE__.activeCampo);
-        }
+      window.__SPEECH_STATE__.activeCampo = campo;
+      window.__SPEECH_STATE__.recognitions[campo].running = true;
 
-        window.__SPEECH_STATE__.activeCampo = campo;
-        window.__SPEECH_STATE__.recognitions[campo].running = true;
-
+      // UI: solo si existe stop
+      if ($stop.length) {
         $start.hide();
         $stop.show();
+      }
 
-        try { recognition.start(); }
-        catch (e) {
-          console.error(e);
-          stopCampo(campo);
-          swal({
-            title: "Micrófono",
-            text: "No se pudo iniciar el dictado. Revisá permisos del micrófono del navegador.",
-            icon: "error",
-            dangerMode: true,
-            closeOnEsc: false,
-            closeOnClickOutside: false
-          });
+      try {
+        // ✅ Truco para Edge: pedir audio antes de start()
+        if (isEdge && navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+          await navigator.mediaDevices.getUserMedia({ audio: true });
         }
-        return false;
-      });
 
+        recognition.start();
+      }
+      catch (e) {
+        console.error(e);
+        stopCampo(campo);
+        swal({
+          title: "Micrófono",
+          text: "No se pudo iniciar el dictado. Revisá permisos del micrófono del navegador.",
+          icon: "error",
+          dangerMode: true,
+          closeOnEsc: false,
+          closeOnClickOutside: false
+        });
+      }
+      return false;
+    });
+
+    // STOP solo si existe botón stop
+    if ($stop.length) {
       $stop.off('click.speech').on('click.speech', function (event) {
         event.preventDefault();
         stopCampo(campo);
         if (window.__SPEECH_STATE__.activeCampo === campo) window.__SPEECH_STATE__.activeCampo = null;
         return false;
       });
+    }
 
-      recognition.onresult = function (event) {
-        let valorActual = $('#formulario_atenciones #' + campo).val() || '';
+    recognition.onresult = function (event) {
+      let valorActual = $('#formulario_atenciones #' + campo).val() || '';
 
-        for (let i = event.resultIndex; i < event.results.length; ++i) {
-          if (event.results[i].isFinal) {
-            const textoNuevo = event.results[i][0].transcript || '';
-            let combinado = (valorActual + ' ' + textoNuevo).trim();
+      for (let i = event.resultIndex; i < event.results.length; ++i) {
+        if (event.results[i].isFinal) {
+          const textoNuevo = (event.results[i][0] && event.results[i][0].transcript) ? event.results[i][0].transcript : '';
+          let combinado = (valorActual + ' ' + textoNuevo).trim();
 
-            if (combinado.length > limites[campo]) {
-              combinado = combinado.substring(0, limites[campo]);
-            }
-
-            $('#formulario_atenciones #' + campo).val(combinado);
-            actualizarCaracteres(campo, 'charNum_' + campo, limites[campo]);
-            valorActual = combinado;
+          if (combinado.length > limites[campo]) {
+            combinado = combinado.substring(0, limites[campo]);
           }
+
+          $('#formulario_atenciones #' + campo).val(combinado);
+          actualizarCaracteres(campo, 'charNum_' + campo, limites[campo]);
+          valorActual = combinado;
         }
-      };
+      }
+    };
 
-      recognition.onerror = function (event) {
-        console.error("Speech error:", event);
-        stopCampo(campo);
-      };
+    recognition.onerror = function (event) {
+      console.error("Speech error:", event);
+      stopCampo(campo);
+    };
 
-      // 🔥 importante: Chrome corta el dictado solo -> reintentar si sigue "running"
-      recognition.onend = function () {
-        const item = window.__SPEECH_STATE__.recognitions[campo];
-        if (item && item.running) {
+    // ✅ Reintento SOLO en Chrome. En Edge puede dar "aborted/network"
+    recognition.onend = function () {
+      const item = window.__SPEECH_STATE__.recognitions[campo];
+      if (item && item.running) {
+        if (!isEdge) {
           try { recognition.start(); } catch (_) {}
         }
-      };
-    });
-  };
+      }
+    };
+  });
+};
 
   // ============================
   // PAGINACION (ANTES: eval)
@@ -1167,22 +1415,49 @@
     var url = '<?php echo SERVERURL; ?>php/atencion_pacientes/paginar.php';
     var fechai = $('#form_main #fecha_b').val();
     var fechaf = $('#form_main #fecha_f').val();
-    var dato = ($('#form_main #bs_regis').val() || '');
-    var estado = ($('#form_main #estado').val() == "" || $('#form_main #estado').val() == null) ? 0 : $('#form_main #estado').val();
+    var dato = $('#form_main #bs_regis').val() || '';
+    var estado = ($('#form_main #estado').val() === '' || $('#form_main #estado').val() == null)
+      ? 0
+      : $('#form_main #estado').val();
 
     $.ajax({
       type: 'POST',
       url: url,
-      async: true,
-      data: 'partida=' + partida + '&fechai=' + fechai + '&fechaf=' + fechaf + '&dato=' + dato + '&estado=' + estado,
-      success: function (data) {
-        try {
-          var array = parseServerPayload(data, "paginar.php");
-          $('#agrega-registros-atenciones').html(array[0]);
-          $('#pagination-atenciones').html(array[1]);
-        } catch (e) { console.error(e); }
+      dataType: 'json',
+      data: {
+        partida: partida,
+        fechai: fechai,
+        fechaf: fechaf,
+        dato: dato,
+        estado: estado
+      },
+      success: function (respuesta) {
+        if (!respuesta || respuesta.status !== 'success') {
+          $('#agrega-registros-atenciones').html(
+            '<div class="alert alert-danger">' +
+            (respuesta && respuesta.message ? respuesta.message : 'No se pudieron consultar las atenciones.') +
+            '</div>'
+          );
+          $('#pagination-atenciones').html('');
+          return;
+        }
+
+        $('#agrega-registros-atenciones').html(respuesta.html);
+        $('#pagination-atenciones').html(respuesta.pagination);
+      },
+      error: function (xhr, textStatus, errorThrown) {
+        var respuesta = xhr.responseJSON;
+        var mensaje = respuesta && respuesta.message
+          ? respuesta.message
+          : (xhr.responseText || errorThrown || textStatus || 'No se pudieron consultar las atenciones.');
+
+        $('#agrega-registros-atenciones').html(
+          '<div class="alert alert-danger">' + mensaje + '</div>'
+        );
+        $('#pagination-atenciones').html('');
       }
     });
+
     return false;
   };
 
@@ -1259,12 +1534,29 @@
   // --- TU CODIGO TAL CUAL (sin tocar urls/fields), solo dejo aquí las que estaban al final:
 
   window.funcionesFormPacientes = function () {
+    /*
+     * Cargas generales que pueden ejecutarse de forma independiente.
+     * No se llama getServicioAtencion() aquí porque esa función requiere
+     * agenda_id y usa una petición síncrona; ejecutarla sin agenda_id
+     * retrasaba innecesariamente la apertura de la atención.
+     */
     getServicioTransito();
-    getServicioAtencion();
     getEstado();
     getPacientes();
-    getConsultorio();
-    pagination(1);
+
+    /*
+     * Los catálogos de Datos Generales y Consultorio se cargan en paralelo.
+     * La paginación inicia cuando todos finalizaron, sin bloquear la interfaz.
+     */
+    $.when(
+      getConsultorio(),
+      getEscolaridad(),
+      getEstadoCivil(),
+      getProfesion(),
+      getReligion()
+    ).always(function () {
+      pagination(1);
+    });
   };
 
   window.getNombrePaciente = function (pacientes_id) {
@@ -1436,16 +1728,139 @@
     $.ajax({ type: 'POST', url: url, success: function () { } });
   };
 
-  window.getConsultorio = function () {
-    var url = '<?php echo SERVERURL; ?>php/citas/getServicioFacturas.php';
-    $.ajax({
-      type: 'POST',
+  window.getEscolaridad = function () {
+    var url = '<?php echo SERVERURL; ?>php/atencion_pacientes/getEscolaridad.php';
+
+    return $.ajax({
+      type: 'GET',
       url: url,
+      dataType: 'html',
+      cache: false,
       success: function (data) {
-        $('#formulario_atenciones #servicio_id').html("").html(data).selectpicker('refresh');
+        var $select = $('#formulario_atenciones #escolaridad');
+
+        $select.html(data);
+        $select.selectpicker('refresh');
+      },
+      error: function (xhr, textStatus, errorThrown) {
+        console.error(
+          'No se pudo cargar Escolaridad:',
+          xhr.responseText || errorThrown || textStatus
+        );
+
+        $('#formulario_atenciones #escolaridad')
+          .html('<option value="">No se pudo cargar Escolaridad</option>')
+          .selectpicker('refresh');
       }
     });
-    return false;
+  };
+
+  window.getEstadoCivil = function () {
+    var url = '<?php echo SERVERURL; ?>php/atencion_pacientes/getEstadoCivil.php';
+
+    return $.ajax({
+      type: 'GET',
+      url: url,
+      dataType: 'html',
+      cache: false,
+      success: function (data) {
+        var $select = $('#formulario_atenciones #estado_civil');
+
+        $select.html(data);
+        $select.selectpicker('refresh');
+      },
+      error: function (xhr, textStatus, errorThrown) {
+        console.error(
+          'No se pudo cargar Estado Civil:',
+          xhr.responseText || errorThrown || textStatus
+        );
+
+        $('#formulario_atenciones #estado_civil')
+          .html('<option value="">No se pudo cargar Estado Civil</option>')
+          .selectpicker('refresh');
+      }
+    });
+  };
+
+  window.getProfesion = function () {
+    var url = '<?php echo SERVERURL; ?>php/atencion_pacientes/getProfesion.php';
+
+    return $.ajax({
+      type: 'GET',
+      url: url,
+      dataType: 'html',
+      cache: false,
+      success: function (data) {
+        var $select = $('#formulario_atenciones #profesion_id');
+
+        $select.html(data);
+        $select.selectpicker('refresh');
+      },
+      error: function (xhr, textStatus, errorThrown) {
+        console.error(
+          'No se pudo cargar Profesión:',
+          xhr.responseText || errorThrown || textStatus
+        );
+
+        $('#formulario_atenciones #profesion_id')
+          .html('<option value="">No se pudo cargar Profesión</option>')
+          .selectpicker('refresh');
+      }
+    });
+  };
+
+  window.getReligion = function () {
+    var url = '<?php echo SERVERURL; ?>php/atencion_pacientes/getReligion.php';
+
+    return $.ajax({
+      type: 'GET',
+      url: url,
+      dataType: 'html',
+      cache: false,
+      success: function (data) {
+        var $select = $('#formulario_atenciones #religion_id');
+
+        $select.html(data);
+        $select.selectpicker('refresh');
+      },
+      error: function (xhr, textStatus, errorThrown) {
+        console.error(
+          'No se pudo cargar Religión:',
+          xhr.responseText || errorThrown || textStatus
+        );
+
+        $('#formulario_atenciones #religion_id')
+          .html('<option value="">No se pudo cargar Religión</option>')
+          .selectpicker('refresh');
+      }
+    });
+  };
+
+  window.getConsultorio = function () {
+    var url = '<?php echo SERVERURL; ?>php/citas/getServicioFacturas.php';
+
+    return $.ajax({
+      type: 'POST',
+      url: url,
+      dataType: 'html',
+      cache: false,
+      success: function (data) {
+        var $select = $('#formulario_atenciones #servicio_id');
+
+        $select.html(data);
+        $select.selectpicker('refresh');
+      },
+      error: function (xhr, textStatus, errorThrown) {
+        console.error(
+          'No se pudo cargar Consultorio:',
+          xhr.responseText || errorThrown || textStatus
+        );
+
+        $('#formulario_atenciones #servicio_id')
+          .html('<option value="">No se pudo cargar Consultorio</option>')
+          .selectpicker('refresh');
+      }
+    });
   };
 
   window.convertDate = function (inputFormat) {
@@ -1498,7 +1913,12 @@
 
   window.formFactura = function () {
     $('#formulario_facturacion')[0].reset();
+
+    vistaAnteriorFactura = 'main';
+    navegacionConfirmada = false;
+
     $('#main_facturacion').hide();
+    $('#atencionMedica').hide();
     $('#facturacion').show();
 
     $('#label_acciones_volver').html("Volver");
@@ -1520,37 +1940,41 @@
     $('#formulario_facturacion #guardar1').hide();
 
     accion = true;
+    setTimeout(guardarSnapshotFactura, 0);
   };
 
-  window.FormAtencionMedica = function () {
+  window.FormAtencionMedica = function (preservarDatos) {
     $('#main_facturacion').hide();
     $('#facturacion').hide();
     $('#atencionMedica').show();
 
-    $('#label_acciones_volver').html("Volver");
-    $('#acciones_atras').removeClass("active");
-    $('#acciones_factura').addClass("active");
-    $('#label_acciones_factura').html("Historia Clinica");
+    $('#label_acciones_volver').html('Atenciones Médicas');
+    $('#acciones_atras').removeClass('active');
+    $('#acciones_factura').addClass('active');
+    $('#label_acciones_factura').html('Historia Clínica');
 
-    $('#formulario_atenciones').trigger("reset");
-    $('#formulario_atenciones #pro').val('Registro');
+    if (preservarDatos !== true) {
+      $('#formulario_atenciones').trigger('reset');
+      $('#formulario_atenciones #pro').val('Registro');
+    }
+
+    // Los tres templates usan los mismos IDs; se reinician los controles
+    // visibles sin borrar datos cuando preservarDatos es true.
+    inicializarContadores(limites);
+    inicializarSpeechRecognition(limites);
 
     accion = false;
   };
 
   window.volver = function () {
-    $('#main_facturacion').hide();
-    $('#atencionMedica').hide();
-    $('#label_acciones_factura').html("");
-    $('#facturacion').hide();
-    $('#acciones_atras').addClass("breadcrumb-item active");
-    $('#acciones_factura').removeClass("active");
-    $('.footer').show();
-    $('.footer1').hide();
-  };
+    if ($('#facturacion').is(':visible')) {
+      solicitarRegresoDesdeFactura();
+      return false;
+    }
 
-  // (Aquí tu handler de #acciones_atras era muy largo; si querés lo integro también,
-  // pero no lo toqué porque no tiene eval y no rompe el error del ":")
+    mostrarVistaPrincipal();
+    return false;
+  };
 
   window.getProfesional = function () {
     var url = '<?php echo SERVERURL; ?>php/atencion_pacientes/getProfeisonal.php';

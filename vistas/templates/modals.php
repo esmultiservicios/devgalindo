@@ -139,90 +139,138 @@
                     <span aria-hidden="true">&times;</span>
                 </button>
             </div>
+
             <div class="modal-body">
-                <form class="FormularioAjax" id="formulario_pacientes" data-async data-target="#rating-modal" action=""
-                    method="POST" data-form="" autocomplete="off" enctype="multipart/form-data">
+                <form class="FormularioAjax"
+                    id="formulario_pacientes"
+                    data-async
+                    data-target="#rating-modal"
+                    action=""
+                    method="POST"
+                    data-form=""
+                    autocomplete="off"
+                    enctype="multipart/form-data">
+
                     <div class="form-row">
                         <div class="col-md-12 mb-3">
                             <input type="hidden" required readonly id="pacientes_id" name="pacientes_id" />
+
                             <div class="input-group mb-3">
                                 <input type="text" required readonly id="pro" name="pro" class="form-control" />
                                 <div class="input-group-append">
                                     <span class="input-group-text">
-                                        <div class="sb-nav-link-icon"></div><i class="fa fa-plus-square"></i>
+                                        <div class="sb-nav-link-icon"></div>
+                                        <i class="fa fa-plus-square"></i>
                                     </span>
                                 </div>
                             </div>
                         </div>
                     </div>
+
                     <div class="form-row" id="grupo_expediente">
                         <div class="col-md-6 mb-3">
                             <label for="expediente">Expediente</label>
-                            <input type="number" name="expediente" class="form-control" id="expediente"
-                                placeholder="Expediente o Identidad">
+                            <input type="number"
+                                name="expediente"
+                                class="form-control"
+                                id="expediente"
+                                placeholder="Expediente o Identidad" />
                         </div>
+
                         <div class="col-md-6 mb-3">
                             <label for="edad">Edad</label>
-                            <input type="text" class="form-control" name="edad" id="edad" maxlength="100"
+                            <input type="text"
+                                class="form-control"
+                                name="edad"
+                                id="edad"
+                                maxlength="100"
                                 readonly="readonly" />
                         </div>
                     </div>
+
                     <div class="form-row">
                         <div class="col-md-4 mb-3">
-                            <label for="nombre">Nombre <span class="priority">*<span /></label>
-                            <input type="text" required id="name" name="name" placeholder="Nombre"
+                            <label for="name">Nombre <span class="text-danger">*</span></label>
+                            <input type="text"
+                                required
+                                id="name"
+                                name="name"
+                                placeholder="Nombre"
+                                maxlength="30"
                                 class="form-control" />
                         </div>
+
                         <div class="col-md-4 mb-3">
-                            <label for="apellido">Apellido <span class="priority">*<span /></label>
-                            <input type="text" required id="lastname" name="lastname" placeholder="Apellido"
+                            <label for="lastname">Apellido <span class="text-danger">*</span></label>
+                            <input type="text"
+                                required
+                                id="lastname"
+                                name="lastname"
+                                placeholder="Apellido"
+                                maxlength="30"
                                 class="form-control" />
                         </div>
-                        <div class="col-md-4 mb-3" style="display: none;">
-                            <label for="fecha">Fecha <span class="priority">*<span /></label>
-                            <input type="date" required id="fecha" name="fecha" value="<?php echo date('Y-m-d'); ?>"
-                                class="form-control" />
-                        </div>
+
                         <div class="col-md-4 mb-3">
-                            <label for="identidad">Identidad o RTN</label>
-                            <div class="input-group mb-3">
-                                <input type="text" class="form-control" id="identidad" name="identidad"
-                                    placeholder="Identidad o RTN">
-                                <div class="input-group-append" id="grupo_editar_rtn">
-                                    <span data-toggle="tooltip" data-placement="top" title="Editar RTN"><a
-                                            data-toggle="modal" href="#"
-                                            class="btn btn-outline-success form-control editar_rtn">
-                                            <div class="sb-nav-link-icon"></div><i class="fas fa-edit fa-lg"></i>
-                                        </a></span>
-                                </div>
-                            </div>
+                            <label for="identidad">Identidad o RTN <span class="text-danger">*</span></label>
+                            <input type="text"
+                                required
+                                id="identidad"
+                                name="identidad"
+                                inputmode="numeric"
+                                maxlength="100"
+                                placeholder="Identidad o RTN"
+                                class="form-control" />
                         </div>
                     </div>
+
                     <div class="form-row">
                         <div class="col-md-3 mb-3">
-                            <label>Fecha de Nacimiento <span class="priority">*<span /></label>
-                            <input type="date" id="fecha_nac" name="fecha_nac" value="<?php echo date('Y-m-d'); ?>"
+                            <label for="fecha_nac">Fecha de Nacimiento <span class="text-danger">*</span></label>
+                            <input type="date"
+                                required
+                                id="fecha_nac"
+                                name="fecha_nac"
+                                value="<?php echo date('Y-m-d'); ?>"
                                 class="form-control" />
                         </div>
+
                         <div class="col-md-3 mb-3">
-                            <label for="sexo">Sexo <span class="priority">*<span /></label>
-                            <div class="input-group mb-3">
-                                <select class="selectpicker" id="sexo" name="sexo" required data-live-search="true"
-                                    title="Genero" data-width="100%" data-size="7">
-                                </select>
-                            </div>
+                            <label for="sexo">Sexo <span class="text-danger">*</span></label>
+                            <select class="form-control"
+                                id="sexo"
+                                name="sexo"
+                                required
+                                data-toggle="tooltip"
+                                data-placement="top"
+                                title="Sexo">
+                                <option value="">Seleccione</option>
+                            </select>
                         </div>
+
                         <div class="col-md-3 mb-3">
-                            <label for="telefono">Teléfono 1 <span class="priority">*<span /></label>
-                            <input type="number" id="telefono1" name="telefono1" class="form-control"
-                                placeholder="Primer Teléfono" required maxlength="8"
-                                oninput="if(this.value.length > this.maxLength) this.value = this.value.slice(0, this.maxLength);" />
+                            <label for="telefono1">Teléfono 1 <span class="text-danger">*</span></label>
+                            <input type="text"
+                                id="telefono1"
+                                name="telefono1"
+                                class="form-control"
+                                placeholder="Primer Teléfono"
+                                required
+                                inputmode="numeric"
+                                maxlength="8"
+                                oninput="this.value = this.value.replace(/[^0-9]/g, '').slice(0, 8);" />
                         </div>
+
                         <div class="col-md-3 mb-3">
-                            <label for="telefono">Teléfono 2</label>
-                            <input type="number" id="telefono2" name="telefono2" class="form-control"
-                                placeholder="Segundo Teléfono" maxlength="8"
-                                oninput="if(this.value.length > this.maxLength) this.value = this.value.slice(0, this.maxLength);" />
+                            <label for="telefono2">Teléfono 2</label>
+                            <input type="text"
+                                id="telefono2"
+                                name="telefono2"
+                                class="form-control"
+                                placeholder="Segundo Teléfono"
+                                inputmode="numeric"
+                                maxlength="8"
+                                oninput="this.value = this.value.replace(/[^0-9]/g, '').slice(0, 8);" />
                         </div>
                     </div>
 
@@ -230,78 +278,129 @@
                         <div class="col-md-4 mb-3">
                             <label for="pais_id">País</label>
                             <div class="input-group mb-3">
-                                <select class="selectpicker" id="pais_id" name="pais_id" data-live-search="true"
-                                    title="País" data-width="100%" data-size="7">
+                                <select id="pais_id"
+                                    name="pais_id"
+                                    class="form-control"
+                                    data-toggle="tooltip"
+                                    data-placement="top"
+                                    title="País">
+                                    <option value="">Seleccione</option>
                                 </select>
+
+                                <div class="input-group-append" id="buscar_pais_pacientes">
+                                    <a data-toggle="modal" href="#" class="btn btn-outline-success">
+                                        <div class="sb-nav-link-icon"></div>
+                                        <i class="fas fa-search fa-lg"></i>
+                                    </a>
+                                </div>
                             </div>
                         </div>
+
                         <div class="col-md-4 mb-3">
                             <label for="departamento_id">Departamentos</label>
                             <div class="input-group mb-3">
-                                <select class="selectpicker" id="departamento_id" name="departamento_id"
-                                    data-live-search="true" title="Departamentos" data-width="100%" data-size="7">
+                                <select id="departamento_id"
+                                    name="departamento_id"
+                                    class="form-control"
+                                    data-toggle="tooltip"
+                                    data-placement="top"
+                                    title="Departamentos">
+                                    <option value="">Seleccione</option>
                                 </select>
+
+                                <div class="input-group-append" id="buscar_departamento_pacientes">
+                                    <a data-toggle="modal" href="#" class="btn btn-outline-success">
+                                        <div class="sb-nav-link-icon"></div>
+                                        <i class="fas fa-search fa-lg"></i>
+                                    </a>
+                                </div>
                             </div>
                         </div>
+
                         <div class="col-md-4 mb-3">
                             <label for="municipio_id">Municipios</label>
                             <div class="input-group mb-3">
-                                <select class="selectpicker" id="municipio_id" name="municipio_id"
-                                    data-live-search="true" title="Municipios" data-width="100%" data-size="7">
+                                <select id="municipio_id"
+                                    name="municipio_id"
+                                    class="form-control"
+                                    data-toggle="tooltip"
+                                    data-placement="top"
+                                    title="Municipios">
+                                    <option value="">Seleccione</option>
                                 </select>
+
+                                <div class="input-group-append" id="buscar_municipio_pacientes">
+                                    <a data-toggle="modal" href="#" class="btn btn-outline-success">
+                                        <div class="sb-nav-link-icon"></div>
+                                        <i class="fas fa-search fa-lg"></i>
+                                    </a>
+                                </div>
                             </div>
                         </div>
                     </div>
 
                     <div class="form-row">
                         <div class="col-md-12 mb-3">
-                            <label for="direccion">Dirección </label>
-                            <input type="text" id="direccion" name="direccion" placeholder="Dirección Completa"
-                                placeholder="Dirección" class="form-control" />
+                            <label for="direccion">Dirección <span class="text-danger">*</span></label>
+                            <input type="text"
+                                required
+                                id="direccion"
+                                name="direccion"
+                                placeholder="Dirección Completa"
+                                maxlength="150"
+                                class="form-control" />
                         </div>
                     </div>
 
                     <div class="form-row">
                         <div class="col-md-12 mb-3">
                             <label for="correo">Correo</label>
-                            <input type="email" name="correo" id="correo" placeholder="alguien@algo.com"
-                                class="form-control" data-toggle="tooltip" data-placement="top"
+                            <input type="email"
+                                name="correo"
+                                id="correo"
+                                placeholder="alguien@algo.com"
+                                class="form-control"
+                                data-toggle="tooltip"
+                                data-placement="top"
                                 title="Este correo será utilizado para enviar las citas creadas y las reprogramaciones, como las notificaciones de las citas pendientes de los usuarios."
-                                maxlength="100" /><label id="validate"></label>
-                        </div>
-                    </div>
-                    <div class="form-row">
-                        <div class="col-md-8 mb-3">
-                            <label for="responsable">Responsable </label>
-                            <input type="text" id="responsable" name="responsable" class="form-control"
-                                placeholder="Responsable" maxlength="70"
-                                oninput="if(this.value.length > this.maxLength) this.value = this.value.slice(0, this.maxLength);" />
-                        </div>
-                        <div class="col-md-4 mb-3">
-                            <label for="responsable_id">Parentesco </label>
-                            <div class="input-group mb-3">
-                                <select class="selectpicker" id="responsable_id" name="responsable_id"
-                                    data-live-search="true" title="Parentesco" data-width="100%" data-size="7">
-                                </select>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="form-row">
-                        <div class="col-md-4 mb-3">
-                            <label for="referido_id">Referido por: </label>
-                            <div class="input-group mb-3">
-                                <select class="selectpicker" id="referido_id" name="referido_id" data-live-search="true"
-                                    title="Referido por" data-width="100%" data-size="7">
-                                </select>
-                            </div>
+                                maxlength="70" />
+                            <label id="validate"></label>
                         </div>
                     </div>
 
+                    <div class="form-row">
+                        <div class="col-md-8 mb-3">
+                            <label for="responsable">Responsable</label>
+                            <input type="text"
+                                id="responsable"
+                                name="responsable"
+                                class="form-control"
+                                placeholder="Responsable"
+                                maxlength="70" />
+                        </div>
+
+                        <div class="col-md-4 mb-3">
+                            <label for="responsable_id">Parentesco</label>
+                            <select class="form-control"
+                                id="responsable_id"
+                                name="responsable_id"
+                                data-toggle="tooltip"
+                                data-placement="top"
+                                title="Parentesco">
+                                <option value="">Seleccione</option>
+                            </select>
+                        </div>
+                    </div>
                 </form>
             </div>
+
             <div class="modal-footer">
-                <button class="btn btn-primary ml-2" form="formulario_pacientes" type="submit" id="reg">
-                    <div class="sb-nav-link-icon"></div><i class="far fa-save fa-lg"></i> Registrar
+                <button class="btn btn-primary ml-2"
+                    form="formulario_pacientes"
+                    type="submit"
+                    id="reg">
+                    <div class="sb-nav-link-icon"></div>
+                    <i class="far fa-save fa-lg"></i> Registrar
                 </button>
             </div>
         </div>

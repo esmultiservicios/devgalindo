@@ -1,15 +1,15 @@
 <?php
-session_start();   
+session_start();
 include "../funtions.php";
 
-$fecha = $_POST['fecha'];
-$fecha_mes = date('Y-m',strtotime($fecha));
-$fecha_sistema = date("Y-m-d");
-$fecha_sistema_mes = date('Y-m',strtotime($fecha_sistema));
+header('Content-Type: text/plain; charset=utf-8');
 
-if($fecha_sistema_mes == $fecha_mes){
-	echo 1;//ESTA DENTRO DEL MES, SE PUEDEN REALIZAR CAMBIOS.
-}else{
-	echo 2;//NO ESTA PERMITIDO REALIZAR CAMBIOS FUERA DE ESTE MES.
+$fecha = trim((string)($_POST['fecha'] ?? ''));
+$obj = DateTime::createFromFormat('Y-m-d', $fecha);
+
+if (!$obj || $obj->format('Y-m-d') !== $fecha) {
+    echo 2;
+    exit;
 }
-?>
+
+echo $obj->format('Y-m') === date('Y-m') ? 1 : 2;

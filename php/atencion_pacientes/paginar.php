@@ -4,139 +4,316 @@ include "../funtions.php";
 
 header('Content-Type: application/json; charset=utf-8');
 
+function responderPaginacion($status, $title, $message, $html = '', $pagination = '', $total = 0)
+{
+    echo json_encode(array(
+        'status' => $status,
+        'title' => $title,
+        'message' => $message,
+        'type' => $status === 'success' ? 'success' : 'error',
+        'html' => $html,
+        'pagination' => $pagination,
+        'total' => (int) $total
+    ), JSON_UNESCAPED_UNICODE);
+    exit;
+}
+
+$mysqli = null;
+$stmtCount = null;
+$stmtData = null;
+
 try {
+    if (!isset($_SESSION['colaborador_id']) || !is_numeric($_SESSION['colaborador_id'])) {
+        throw new Exception('La sesión del usuario no es válida. Inicie sesión nuevamente.');
+    }
+
+    $colaborador_id = (int) $_SESSION['colaborador_id'];
+    $paginaActual = isset($_POST['partida']) ? (int) $_POST['partida'] : 1;
+    $paginaActual = $paginaActual > 0 ? $paginaActual : 1;
+
+    $fechai = isset($_POST['fechai']) ? trim((string) $_POST['fechai']) : '';
+    $fechaf = isset($_POST['fechaf']) ? trim((string) $_POST['fechaf']) : '';
+    $dato = isset($_POST['dato']) ? trim((string) $_POST['dato']) : '';
+    $estado = isset($_POST['estado']) && $_POST['estado'] !== '' ? (int) $_POST['estado'] : 0;
+
+    $validarFecha = static function ($fecha) {
+        $objeto = DateTime::createFromFormat('Y-m-d', $fecha);
+        $errores = DateTime::getLastErrors();
+
+        return $objeto !== false
+            && ($errores === false || ($errores['warning_count'] === 0 && $errores['error_count'] === 0))
+            && $objeto->format('Y-m-d') === $fecha;
+    };
+
+    if (!$validarFecha($fechai) || !$validarFecha($fechaf)) {
+        throw new Exception('El rango de fechas no es válido.');
+    }
+
     $mysqli = connect_mysqli();
 
-    $colaborador_id = $_SESSION['colaborador_id'];
-    $paginaActual = isset($_POST['partida']) ? (int)$_POST['partida'] : 1;
-    $fechai = $_POST['fechai'] ?? '';
-    $fechaf = $_POST['fechaf'] ?? '';
-    $dato = $_POST['dato'] ?? '';
-    $estado = $_POST['estado'] ?? '';
-
-    if ($paginaActual <= 0) $paginaActual = 1;
-
-    // CONSULTAR PUESTO_ID (si lo necesitás)
-    $consultar_puesto = "SELECT puesto_id FROM colaboradores WHERE colaborador_id = '$colaborador_id'";
-    $resultP = $mysqli->query($consultar_puesto);
-    $puesto_id = '';
-    if ($resultP && $resultP->num_rows > 0) {
-        $puesto_id = $resultP->fetch_assoc()['puesto_id'];
+    if (!$mysqli || $mysqli->connect_errno) {
+        throw new Exception('No se pudo establecer conexión con la base de datos.');
     }
 
-    $dato_esc = $mysqli->real_escape_string($dato);
+    $mysqli->set_charset('utf8mb4');
 
-    $where = "WHERE CAST(a.fecha_cita AS DATE) BETWEEN '$fechai' AND '$fechaf'
-              AND a.status = '$estado'
-              AND a.colaborador_id = '$colaborador_id'
-              AND a.preclinica = 1
-              AND (
-                    p.expediente LIKE '%$dato_esc%' OR
-                    CONCAT(p.nombre,' ',p.apellido) LIKE '%$dato_esc%' OR
-                    p.identidad LIKE '$dato_esc%' OR
-                    p.apellido LIKE '$dato_esc%'
-                  )";
+    $busqueda = '%' . $dato . '%';
 
-    // CONTAR TOTAL (IMPORTANTE: para paginación real)
-    $countSql = "SELECT COUNT(*) AS total
-                 FROM agenda AS a
-                 INNER JOIN pacientes AS p ON a.pacientes_id = p.pacientes_id
-                 INNER JOIN servicios AS s ON a.servicio_id = s.servicio_id
-                 INNER JOIN colaboradores AS c ON a.colaborador_id = c.colaborador_id
-                 $where";
+    $sqlCount = "
+        SELECT COUNT(*) AS total
+        FROM agenda AS a
+        INNER JOIN pacientes AS p ON a.pacientes_id = p.pacientes_id
+        INNER JOIN servicios AS s ON a.servicio_id = s.servicio_id
+        INNER JOIN colaboradores AS c ON a.colaborador_id = c.colaborador_id
+        WHERE CAST(a.fecha_cita AS DATE) BETWEEN ? AND ?
+          AND a.status = ?
+          AND a.colaborador_id = ?
+          AND a.preclinica = 1
+          AND (
+                CAST(p.expediente AS CHAR) LIKE ?
+                OR CONCAT(p.nombre, ' ', p.apellido) LIKE ?
+                OR CONCAT(p.apellido, ' ', p.nombre) LIKE ?
+                OR p.identidad LIKE ?
+                OR p.apellido LIKE ?
+              )";
 
-    $resultCount = $mysqli->query($countSql);
-    if (!$resultCount) throw new Exception($mysqli->error);
-    $totalRows = (int)($resultCount->fetch_assoc()['total'] ?? 0);
+    $stmtCount = $mysqli->prepare($sqlCount);
+
+    if (!$stmtCount) {
+        throw new Exception('No se pudo preparar el conteo de atenciones: ' . $mysqli->error);
+    }
+
+    $stmtCount->bind_param(
+        'ssiisssss',
+        $fechai,
+        $fechaf,
+        $estado,
+        $colaborador_id,
+        $busqueda,
+        $busqueda,
+        $busqueda,
+        $busqueda,
+        $busqueda
+    );
+
+    if (!$stmtCount->execute()) {
+        throw new Exception('No se pudo contar las atenciones: ' . $stmtCount->error);
+    }
+
+    $resultadoCount = $stmtCount->get_result();
+    $totalRows = (int) ($resultadoCount->fetch_assoc()['total'] ?? 0);
 
     $nroLotes = 25;
-    $nroPaginas = ($totalRows > 0) ? (int)ceil($totalRows / $nroLotes) : 1;
+    $nroPaginas = max(1, (int) ceil($totalRows / $nroLotes));
 
-    $lista = '';
-    if ($paginaActual > 1) {
-        $lista .= '<li class="page-item"><a class="page-link" href="javascript:pagination(1);">Inicio</a></li>';
-        $lista .= '<li class="page-item"><a class="page-link" href="javascript:pagination(' . ($paginaActual - 1) . ');">Anterior ' . ($paginaActual - 1) . '</a></li>';
-    }
-    if ($paginaActual < $nroPaginas) {
-        $lista .= '<li class="page-item"><a class="page-link" href="javascript:pagination(' . ($paginaActual + 1) . ');">Siguiente ' . ($paginaActual + 1) . ' de ' . $nroPaginas . '</a></li>';
-        $lista .= '<li class="page-item"><a class="page-link" href="javascript:pagination(' . $nroPaginas . ');">Última</a></li>';
+    if ($paginaActual > $nroPaginas) {
+        $paginaActual = $nroPaginas;
     }
 
-    $limit = ($paginaActual - 1) * $nroLotes;
+    $offset = ($paginaActual - 1) * $nroLotes;
 
-    $sql = "SELECT p.pacientes_id AS pacientes_id,
-                   a.agenda_id AS agenda_id,
-                   p.identidad AS identidad,
-                   CONCAT(p.apellido,' ',p.nombre) AS paciente,
-                   p.telefono1 AS telefono,
-                   DATE_FORMAT(CAST(a.fecha_cita AS DATE), '%d/%m/%Y') AS fecha_cita,
-                   a.hora AS hora,
-                   a.paciente AS tipo_paciente,
-                   CONCAT(c.apellido,' ',c.nombre) AS colaborador,
-                   s.nombre AS servicio,
-                   a.observacion AS observacion,
-                   a.comentario AS comentario,
-                   (CASE WHEN a.status = '1' THEN 'Atendido' ELSE 'Pendiente' END) AS estatus,
-                   CAST(a.fecha_cita AS DATE) AS fecha,
-                   c.colaborador_id,
-                   s.servicio_id
-            FROM agenda AS a
-            INNER JOIN pacientes AS p ON a.pacientes_id = p.pacientes_id
-            INNER JOIN servicios AS s ON a.servicio_id = s.servicio_id
-            INNER JOIN colaboradores AS c ON a.colaborador_id = c.colaborador_id
-            $where
-            ORDER BY a.hora, a.pacientes_id ASC
-            LIMIT $limit, $nroLotes";
+    $sqlData = "
+        SELECT
+            p.pacientes_id,
+            a.agenda_id,
+            p.identidad,
+            CONCAT(p.apellido, ' ', p.nombre) AS paciente,
+            p.telefono1 AS telefono,
+            DATE_FORMAT(a.fecha_cita, '%d/%m/%Y') AS fecha_cita,
+            a.hora,
+            a.paciente AS tipo_paciente,
+            CONCAT(c.apellido, ' ', c.nombre) AS colaborador,
+            s.nombre AS servicio,
+            a.observacion,
+            a.comentario,
+            CASE
+                WHEN a.status = 0 THEN 'Pendiente'
+                WHEN a.status = 1 THEN 'Atendido'
+                WHEN a.status = 2 THEN 'Ausencia'
+                WHEN a.status = 3 THEN 'Seguimiento'
+                WHEN a.status = 4 THEN 'Eliminado'
+                ELSE 'Desconocido'
+            END AS estatus,
+            a.status,
+            CAST(a.fecha_cita AS DATE) AS fecha,
+            c.colaborador_id,
+            s.servicio_id
+        FROM agenda AS a
+        INNER JOIN pacientes AS p ON a.pacientes_id = p.pacientes_id
+        INNER JOIN servicios AS s ON a.servicio_id = s.servicio_id
+        INNER JOIN colaboradores AS c ON a.colaborador_id = c.colaborador_id
+        WHERE CAST(a.fecha_cita AS DATE) BETWEEN ? AND ?
+          AND a.status = ?
+          AND a.colaborador_id = ?
+          AND a.preclinica = 1
+          AND (
+                CAST(p.expediente AS CHAR) LIKE ?
+                OR CONCAT(p.nombre, ' ', p.apellido) LIKE ?
+                OR CONCAT(p.apellido, ' ', p.nombre) LIKE ?
+                OR p.identidad LIKE ?
+                OR p.apellido LIKE ?
+              )
+        ORDER BY a.fecha_cita ASC, a.hora ASC, a.pacientes_id ASC
+        LIMIT ?, ?";
 
-    $result = $mysqli->query($sql);
-    if (!$result) throw new Exception($mysqli->error);
+    $stmtData = $mysqli->prepare($sqlData);
 
-    // TABLA HTML (esto es lo que tu JS espera meter con .html())
-    $tabla = '<table class="table table-striped table-condensed table-hover">
-                <thead>
+    if (!$stmtData) {
+        throw new Exception('No se pudo preparar la consulta de atenciones: ' . $mysqli->error);
+    }
+
+    $stmtData->bind_param(
+        'ssiisssssii',
+        $fechai,
+        $fechaf,
+        $estado,
+        $colaborador_id,
+        $busqueda,
+        $busqueda,
+        $busqueda,
+        $busqueda,
+        $busqueda,
+        $offset,
+        $nroLotes
+    );
+
+    if (!$stmtData->execute()) {
+        throw new Exception('No se pudieron consultar las atenciones: ' . $stmtData->error);
+    }
+
+    $resultado = $stmtData->get_result();
+
+    $html = '
+        <table class="table table-striped table-condensed table-hover">
+            <thead>
                 <tr>
-                  <th>Fecha</th>
-                  <th>Hora</th>
-                  <th>Paciente</th>
-                  <th>Identidad</th>
-                  <th>Teléfono</th>
-                  <th>Servicio</th>
-                  <th>Estatus</th>
-                  <th>Observación</th>
-                  <th>Comentario</th>
+                    <th>Fecha</th>
+                    <th>Hora</th>
+                    <th>Paciente</th>
+                    <th>Identidad</th>
+                    <th>Teléfono</th>
+                    <th>Servicio</th>
+                    <th>Estatus</th>
+                    <th>Observación</th>
+                    <th>Comentario</th>
+                    <th>Acciones</th>
                 </tr>
-                </thead>
-                <tbody>';
+            </thead>
+            <tbody>';
 
-    if ($result->num_rows == 0) {
-        $tabla .= '<tr><td colspan="9" style="color:#C7030D">No se encontraron resultados</td></tr>';
-    } else {
-        while ($r = $result->fetch_assoc()) {
-            $tabla .= '<tr>
-              <td>' . ($r['fecha_cita'] ?? '') . '</td>
-              <td>' . ($r['hora'] ?? '') . '</td>
-              <td>' . ($r['paciente'] ?? '') . '</td>
-              <td>' . ($r['identidad'] ?? '') . '</td>
-              <td>' . ($r['telefono'] ?? '') . '</td>
-              <td>' . ($r['servicio'] ?? '') . '</td>
-              <td>' . ($r['estatus'] ?? '') . '</td>
-              <td>' . ($r['observacion'] ?? '') . '</td>
-              <td>' . ($r['comentario'] ?? '') . '</td>
+    if ($resultado->num_rows === 0) {
+        $html .= '
+            <tr>
+                <td colspan="10" class="text-center text-danger">
+                    No se encontraron resultados
+                </td>
             </tr>';
+    } else {
+        while ($fila = $resultado->fetch_assoc()) {
+            $pacientes_id = (int) $fila['pacientes_id'];
+            $agenda_id = (int) $fila['agenda_id'];
+            $statusAgenda = (int) $fila['status'];
+
+            $acciones = '<span class="text-muted">Sin acciones</span>';
+
+            if ($statusAgenda === 0) {
+                $acciones = '
+                    <button type="button"
+                        class="btn btn-primary btn-sm"
+                        onclick="editarRegistro(' . $pacientes_id . ', ' . $agenda_id . ');">
+                        <i class="fas fa-notes-medical"></i> Generar atención
+                    </button>';
+            }
+
+            $html .= '
+                <tr>
+                    <td>' . htmlspecialchars((string) $fila['fecha_cita'], ENT_QUOTES, 'UTF-8') . '</td>
+                    <td>' . htmlspecialchars((string) $fila['hora'], ENT_QUOTES, 'UTF-8') . '</td>
+                    <td>' . htmlspecialchars((string) $fila['paciente'], ENT_QUOTES, 'UTF-8') . '</td>
+                    <td>' . htmlspecialchars((string) $fila['identidad'], ENT_QUOTES, 'UTF-8') . '</td>
+                    <td>' . htmlspecialchars((string) $fila['telefono'], ENT_QUOTES, 'UTF-8') . '</td>
+                    <td>' . htmlspecialchars((string) $fila['servicio'], ENT_QUOTES, 'UTF-8') . '</td>
+                    <td>' . htmlspecialchars((string) $fila['estatus'], ENT_QUOTES, 'UTF-8') . '</td>
+                    <td>' . htmlspecialchars((string) $fila['observacion'], ENT_QUOTES, 'UTF-8') . '</td>
+                    <td>' . htmlspecialchars((string) $fila['comentario'], ENT_QUOTES, 'UTF-8') . '</td>
+                    <td>' . $acciones . '</td>
+                </tr>';
         }
 
-        $tabla .= '<tr><td colspan="9"><b><p align="center">Total de Registros Encontrados ' . $totalRows . '</p></b></td></tr>';
+        $html .= '
+            <tr>
+                <td colspan="10" class="text-center">
+                    <strong>Total de registros encontrados: ' . $totalRows . '</strong>
+                </td>
+            </tr>';
     }
 
-    $tabla .= '</tbody></table>';
+    $html .= '</tbody></table>';
 
-    echo json_encode([0 => $tabla, 1 => $lista, 2 => $totalRows], JSON_UNESCAPED_UNICODE);
+    $pagination = '';
 
-    $result->free();
-    $resultCount->free();
-    $mysqli->close();
+    if ($paginaActual > 1) {
+        $pagination .= '
+            <li class="page-item">
+                <a class="page-link" href="#" onclick="pagination(1); return false;">Inicio</a>
+            </li>
+            <li class="page-item">
+                <a class="page-link" href="#" onclick="pagination(' . ($paginaActual - 1) . '); return false;">
+                    Anterior
+                </a>
+            </li>';
+    }
 
+    $pagination .= '
+        <li class="page-item active">
+            <span class="page-link">' . $paginaActual . ' de ' . $nroPaginas . '</span>
+        </li>';
+
+    if ($paginaActual < $nroPaginas) {
+        $pagination .= '
+            <li class="page-item">
+                <a class="page-link" href="#" onclick="pagination(' . ($paginaActual + 1) . '); return false;">
+                    Siguiente
+                </a>
+            </li>
+            <li class="page-item">
+                <a class="page-link" href="#" onclick="pagination(' . $nroPaginas . '); return false;">
+                    Última
+                </a>
+            </li>';
+    }
+
+    responderPaginacion(
+        'success',
+        'Consulta completada',
+        $totalRows > 0 ? 'Atenciones encontradas.' : 'No se encontraron atenciones.',
+        $html,
+        $pagination,
+        $totalRows
+    );
 } catch (Throwable $e) {
-    // para que nunca reviente el JS
-    echo json_encode([0 => '', 1 => '', 2 => 0, 'error' => true, 'message' => $e->getMessage()], JSON_UNESCAPED_UNICODE);
+    error_log('Error al paginar atenciones: ' . $e->getMessage());
+
+    responderPaginacion(
+        'error',
+        'Error al consultar',
+        $e->getMessage(),
+        '<div class="alert alert-danger">' .
+            htmlspecialchars($e->getMessage(), ENT_QUOTES, 'UTF-8') .
+        '</div>',
+        '',
+        0
+    );
+} finally {
+    if ($stmtCount instanceof mysqli_stmt) {
+        $stmtCount->close();
+    }
+
+    if ($stmtData instanceof mysqli_stmt) {
+        $stmtData->close();
+    }
+
+    if ($mysqli instanceof mysqli) {
+        $mysqli->close();
+    }
 }

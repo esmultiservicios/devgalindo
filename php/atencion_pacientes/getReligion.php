@@ -1,20 +1,71 @@
 <?php
-session_start();   
+session_start();
 include "../funtions.php";
 
-//CONEXION A DB
-$mysqli = connect_mysqli();
+header('Content-Type: text/html; charset=utf-8');
 
-$consulta = "SELECT * FROM religion";
-$result = $mysqli->query($consulta) or die($mysqli->error);
+$mysqli = null;
+$stmt = null;
 
-if($result->num_rows>0){
-	while($consulta2 = $result->fetch_assoc()){
-		echo '<option value="'.$consulta2['religion_id'].'">'.$consulta2['nombre'].'</option>';
-	}
-}else{
-	echo '<option value="">No hay registros</option>';
+try {
+    if (!isset($_SESSION['colaborador_id']) || !is_numeric($_SESSION['colaborador_id'])) {
+        throw new Exception('La sesión del usuario no es válida.');
+    }
+
+    $mysqli = connect_mysqli();
+
+    if (!$mysqli || $mysqli->connect_errno) {
+        throw new Exception('No se pudo establecer conexión con la base de datos.');
+    }
+
+    $mysqli->set_charset('utf8mb4');
+
+    /*
+     * No se reciben parámetros del usuario.
+     * Se consultan únicamente los campos necesarios.
+     */
+    $stmt = $mysqli->prepare(
+        "SELECT religion_id, nombre
+         FROM religion
+         ORDER BY nombre ASC"
+    );
+
+    if (!$stmt) {
+        throw new Exception('No se pudo preparar la consulta de Religión: ' . $mysqli->error);
+    }
+
+    if (!$stmt->execute()) {
+        throw new Exception('No se pudo consultar Religión: ' . $stmt->error);
+    }
+
+    $resultado = $stmt->get_result();
+
+    echo '<option value="">Seleccione</option>';
+
+    if ($resultado->num_rows === 0) {
+        echo '<option value="">No hay registros</option>';
+    } else {
+        while ($registro = $resultado->fetch_assoc()) {
+            $religion_id = (int) $registro['religion_id'];
+            $nombre = htmlspecialchars(
+                (string) $registro['nombre'],
+                ENT_QUOTES | ENT_SUBSTITUTE,
+                'UTF-8'
+            );
+
+            echo '<option value="' . $religion_id . '">' . $nombre . '</option>';
+        }
+    }
+} catch (Throwable $e) {
+    error_log('Error al cargar Religión: ' . $e->getMessage());
+
+    echo '<option value="">No se pudo cargar Religión</option>';
+} finally {
+    if ($stmt instanceof mysqli_stmt) {
+        $stmt->close();
+    }
+
+    if ($mysqli instanceof mysqli) {
+        $mysqli->close();
+    }
 }
-
-$result->free();//LIMPIAR RESULTADO
-$mysqli->close();//CERRAR CONEXIÓN
