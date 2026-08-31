@@ -65,6 +65,120 @@
         min-height: 38px;
     }
 
+    #atencionMedica #seccion_seguimiento .card {
+        border: 1px solid #dfe7ef;
+        border-radius: 14px;
+        overflow: hidden;
+        box-shadow: 0 8px 24px rgba(15, 23, 42, 0.05);
+        background: #fff;
+    }
+
+    #atencionMedica .seguimiento-premium-subtitle {
+        color: #6c757d;
+        font-size: 0.92rem;
+        margin-top: 0.35rem;
+    }
+
+    #atencionMedica .seguimiento-premium-wrap {
+        background: #fbfdff;
+        border: 1px solid #e6edf2;
+        border-radius: 14px;
+        padding: 1rem;
+        min-height: 280px;
+    }
+
+    #atencionMedica .seguimiento-premium-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 0.75rem;
+        flex-wrap: wrap;
+        margin-bottom: 0.85rem;
+        padding-bottom: 0.85rem;
+        border-bottom: 1px solid #e9eef3;
+    }
+
+    #atencionMedica .seguimiento-premium-title {
+        font-size: 1rem;
+        font-weight: 600;
+        color: #22313f;
+    }
+
+    #atencionMedica .seguimiento-premium-badge {
+        display: inline-flex;
+        align-items: center;
+        padding: 0.45rem 0.8rem;
+        border-radius: 999px;
+        background: #e8f6f8;
+        color: #0f6d7a;
+        font-weight: 600;
+        font-size: 0.85rem;
+    }
+
+    #atencionMedica .seguimiento-timeline {
+        display: flex;
+        flex-direction: column;
+        gap: 0.8rem;
+        max-height: 420px;
+        overflow-y: auto;
+        padding-right: 0.15rem;
+    }
+
+    #atencionMedica .seguimiento-item {
+        border: 1px solid #e5ecf2;
+        border-left: 4px solid #17a2b8;
+        border-radius: 12px;
+        background: #fff;
+        padding: 0.9rem 1rem;
+    }
+
+    #atencionMedica .seguimiento-item-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 0.75rem;
+        flex-wrap: wrap;
+        margin-bottom: 0.55rem;
+    }
+
+    #atencionMedica .seguimiento-item-title {
+        font-weight: 600;
+        color: #22313f;
+    }
+
+    #atencionMedica .seguimiento-item-date {
+        font-size: 0.88rem;
+        color: #0f6d7a;
+        font-weight: 500;
+    }
+
+    #atencionMedica .seguimiento-item-body {
+        color: #495057;
+        line-height: 1.6;
+        white-space: pre-line;
+    }
+
+    #atencionMedica .seguimiento-empty {
+        text-align: center;
+        padding: 2rem 1rem;
+        color: #6c757d;
+        background: #fff;
+        border: 1px dashed #cfd9df;
+        border-radius: 12px;
+    }
+
+    #atencionMedica .seguimiento-empty i {
+        display: block;
+        font-size: 1.75rem;
+        color: #17a2b8;
+        margin-bottom: 0.65rem;
+    }
+
+    #atencionMedica #seguimiento_read {
+        display: none;
+    }
+
+
     @media (max-width: 767.98px) {
         #atencionMedica .sticky-buttons {
             position: static;
@@ -570,6 +684,21 @@
                                 Historia Seguimiento (Tratamiento)
                             </div>
                             <div class="card-body">
+                                <div class="seguimiento-premium-wrap">
+                                    <div class="seguimiento-premium-header">
+                                        <div>
+                                            <div class="seguimiento-premium-title">Evolución clínica del paciente</div>
+                                            <div class="seguimiento-premium-subtitle">Vista más clara y cronológica del seguimiento registrado en cada sesión.</div>
+                                        </div>
+                                        <span class="seguimiento-premium-badge" id="seguimiento_total_registros">0 registros</span>
+                                    </div>
+                                    <div id="seguimiento_timeline" class="seguimiento-timeline">
+                                        <div class="seguimiento-empty">
+                                            <i class="fas fa-notes-medical"></i>
+                                            <div>No hay seguimiento registrado para este paciente.</div>
+                                        </div>
+                                    </div>
+                                </div>
                                 <textarea id="seguimiento_read" name="seguimiento_read" readonly
                                     placeholder="Tratamiento" class="form-control" maxlength="500" rows="14"></textarea>
                             </div>

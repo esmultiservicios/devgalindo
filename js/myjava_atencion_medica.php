@@ -44,11 +44,20 @@
   }
 
   function getSafeFechaGlobal() {
-    if (typeof window.fecha !== "undefined" && window.fecha) {
-      return window.fecha;
+    var fechaGlobal = typeof window.fecha !== 'undefined' ? window.fecha : null;
+
+    if (typeof fechaGlobal === 'string') {
+      fechaGlobal = fechaGlobal.trim();
+      if (/^\d{4}-\d{2}-\d{2}$/.test(fechaGlobal)) {
+        return fechaGlobal;
+      }
     }
 
-    // La fecha actual puede obtenerse localmente sin bloquear la interfaz.
+    var fechaFormulario = $('#formulario_atenciones #fecha').val();
+    if (typeof fechaFormulario === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(fechaFormulario)) {
+      return fechaFormulario;
+    }
+
     return convertDate(new Date());
   }
 
@@ -85,6 +94,95 @@
   };
 
   var servicioAtencionPendiente = null;
+
+
+  var guardandoAtencion = false;
+
+  function escaparHtmlAtencion(valor) {
+    return $('<div>').text(valor == null ? '' : String(valor)).html();
+  }
+
+  function renderSeguimientoPremium() {
+    var texto = ($('#formulario_atenciones #seguimiento_read').val() || '').replace(/\r\n/g, '\n').trim();
+    var $timeline = $('#seguimiento_timeline');
+    var $contador = $('#seguimiento_total_registros');
+
+    if (!$timeline.length) {
+      return;
+    }
+
+    if (!texto) {
+      $contador.text('0 registros');
+      $timeline.html(
+        '<div class="seguimiento-empty">' +
+          '<i class="fas fa-notes-medical"></i>' +
+          '<div>No hay seguimiento registrado para este paciente.</div>' +
+        '</div>'
+      );
+      return;
+    }
+
+    var bloques = [];
+    var actual = null;
+
+    texto.split('\n').forEach(function (linea) {
+      var limpia = $.trim(linea);
+      if (!limpia) {
+        return;
+      }
+
+      if (/^Fecha\s*:/i.test(limpia)) {
+        if (actual) {
+          bloques.push(actual);
+        }
+
+        actual = {
+          fecha: limpia.replace(/^Fecha\s*:/i, '').trim() || 'Sin fecha',
+          contenido: []
+        };
+        return;
+      }
+
+      if (!actual) {
+        actual = {
+          fecha: 'Registro general',
+          contenido: []
+        };
+      }
+
+      actual.contenido.push(limpia);
+    });
+
+    if (actual) {
+      bloques.push(actual);
+    }
+
+    if (!bloques.length) {
+      $contador.text('0 registros');
+      $timeline.html(
+        '<div class="seguimiento-empty">' +
+          '<i class="fas fa-notes-medical"></i>' +
+          '<div>No hay seguimiento registrado para este paciente.</div>' +
+        '</div>'
+      );
+      return;
+    }
+
+    var html = '';
+    bloques.forEach(function (bloque, index) {
+      var titulo = bloque.fecha === 'Registro general' ? 'Seguimiento clínico' : 'Sesión ' + (index + 1);
+      html += '<div class="seguimiento-item">' +
+        '<div class="seguimiento-item-header">' +
+          '<span class="seguimiento-item-title">' + escaparHtmlAtencion(titulo) + '</span>' +
+          '<span class="seguimiento-item-date"><i class="far fa-calendar-alt mr-1"></i>' + escaparHtmlAtencion(bloque.fecha) + '</span>' +
+        '</div>' +
+        '<div class="seguimiento-item-body">' + escaparHtmlAtencion(bloque.contenido.join('\n')) + '</div>' +
+      '</div>';
+    });
+
+    $contador.text(bloques.length + ' ' + (bloques.length === 1 ? 'registro' : 'registros'));
+    $timeline.html(html);
+  }
 
   function obtenerPrimerServicioDisponible($select) {
     var valor = '';
@@ -237,9 +335,17 @@
   function abortarSolicitud(nombre) {
     var solicitud = solicitudesActivas[nombre];
 
-    if (solicitud && solicitud.readyState !== 4) {
-      solicitud.abort();
+    if (!solicitud) {
+      return;
     }
+
+    if (typeof solicitud.abort === 'function') {
+      if (typeof solicitud.readyState === 'undefined' || solicitud.readyState !== 4) {
+        solicitud.abort();
+      }
+    }
+
+    solicitudesActivas[nombre] = null;
   }
 
   function programarPaginacion(partida, espera) {
@@ -722,6 +828,8 @@
     $(document).off("click.atencion", "#reg_atencion").on("click.atencion", "#reg_atencion", function (e) {
       e.preventDefault();
 
+      if (guardandoAtencion) return;
+
       let servicio_id = obtenerServicioAtencionParaGuardar();
 
       if (!servicio_id) {
@@ -746,6 +854,9 @@
 
       let formData = new FormData($('#formulario_atenciones')[0]);
       formData.set('servicio_id', servicio_id);
+
+      guardandoAtencion = true;
+      $('#reg_atencion').prop('disabled', true);
 
       $.ajax({
         type: 'POST',
@@ -790,6 +901,10 @@
             closeOnEsc: false,
             closeOnClickOutside: false
           });
+        },
+        complete: function () {
+          guardandoAtencion = false;
+          $('#reg_atencion').prop('disabled', false);
         }
       });
     });
@@ -797,6 +912,8 @@
     // EDITAR ATENCION
     $(document).off("click.atencion", "#edi_atencion").on("click.atencion", "#edi_atencion", function (e) {
       e.preventDefault();
+
+      if (guardandoAtencion) return;
 
       let servicio_id = obtenerServicioAtencionParaGuardar();
 
@@ -822,6 +939,9 @@
 
       let formData = new FormData($('#formulario_atenciones')[0]);
       formData.set('servicio_id', servicio_id);
+
+      guardandoAtencion = true;
+      $('#edi_atencion').prop('disabled', true);
 
       $.ajax({
         type: 'POST',
@@ -866,6 +986,10 @@
             closeOnEsc: false,
             closeOnClickOutside: false
           });
+        },
+        complete: function () {
+          guardandoAtencion = false;
+          $('#edi_atencion').prop('disabled', false);
         }
       });
     });
@@ -1046,6 +1170,7 @@
         );
         $('#formulario_buscarAtencion #pagination_busqueda_').html('');
       });
+
 
     // TRANSITO BOTONES
     $(document).off("click.atencion", "#reg_transitoe").on("click.atencion", "#reg_transitoe", function (e) {
@@ -1298,6 +1423,7 @@
               $('#formulario_atenciones #terapeuta_actual').val(array[29]);
 
               $('#formulario_atenciones #seguimiento_read').val(array[10]);
+              renderSeguimientoPremium();
               $('#formulario_atenciones #diagnostico').val(array[11]);
               $('#formulario_atenciones #fecha_nac').val(array[12]);
 
@@ -1622,6 +1748,7 @@
               $('#formulario_atenciones #fecha').val(array[7]);
               $('#formulario_atenciones #fecha_nac').val(array[8]);
               $('#formulario_atenciones #seguimiento_read').val(array[13]);
+              renderSeguimientoPremium();
               $('#formulario_atenciones #num_hijos').val(array[16]);
               $('#formulario_atenciones #red_apoyo').val(array[18]);
               $('#formulario_atenciones #terapeuta_actual').val(array[19]);
@@ -1679,7 +1806,7 @@
               // En edición desde agenda no hace falta cargar todos los pacientes.
               // Se crea un select con únicamente el paciente actual.
               prepararPacienteUnicoAtencion(array[6], array[1]);
-
+    
               ocultarCargaAtencion();
               console.timeEnd('Generar atención - total');
 
@@ -2216,6 +2343,7 @@ window.inicializarSpeechRecognition = function (limites) {
     $('#formulario_atenciones #seguimiento').val('');
     $('#formulario_atenciones #seguimiento_read').val('');
     $('#formulario_atenciones #pro').val('Registro');
+    renderSeguimientoPremium();
   };
 
   window.limpiarFormMetodoPago = function () {
@@ -2231,6 +2359,8 @@ window.inicializarSpeechRecognition = function (limites) {
   // ============================
 
   // --- TU CODIGO TAL CUAL (sin tocar urls/fields), solo dejo aquí las que estaban al final:
+
+  renderSeguimientoPremium();
 
   window.funcionesFormPacientes = function () {
     if (estadoCargaInicial.catalogosIniciados) {
@@ -2333,21 +2463,42 @@ window.inicializarSpeechRecognition = function (limites) {
 
   window.obtenerCatalogoPacientesHtml = function () {
     if (cacheCatalogosAtencion.pacientesHtml !== null) {
-      return $.Deferred()
+      var cachePromise = $.Deferred()
         .resolve(cacheCatalogosAtencion.pacientesHtml)
         .promise();
+
+      cachePromise.abort = function () {};
+      cachePromise.readyState = 4;
+      return cachePromise;
     }
 
-    return $.ajax({
+    var xhr = $.ajax({
       type: 'POST',
       url: '<?php echo SERVERURL; ?>php/atencion_pacientes/getPacientes.php',
       dataType: 'html',
       cache: true,
       timeout: 30000
-    }).then(function (data) {
+    });
+
+    var promise = xhr.then(function (data) {
       cacheCatalogosAtencion.pacientesHtml = data;
       return data;
     });
+
+    promise.abort = function () {
+      if (xhr && typeof xhr.abort === 'function' && xhr.readyState !== 4) {
+        xhr.abort();
+      }
+    };
+
+    Object.defineProperty(promise, 'readyState', {
+      configurable: true,
+      get: function () {
+        return xhr && typeof xhr.readyState !== 'undefined' ? xhr.readyState : 4;
+      }
+    });
+
+    return promise;
   };
 
   window.getPacientesAtencion = function () {

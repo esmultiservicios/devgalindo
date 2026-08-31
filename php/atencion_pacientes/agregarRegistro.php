@@ -159,14 +159,14 @@ try {
 
     $stmt = $mysqli->prepare(
         'SELECT atencion_id FROM atenciones_medicas
-         WHERE pacientes_id = ? AND fecha = ? AND servicio_id = ? LIMIT 1'
+         WHERE agenda_id = ? LIMIT 1'
     );
-    if (!$stmt) throw new Exception('No se pudo preparar la validación de atención: ' . $mysqli->error);
-    $stmt->bind_param('isi', $pacientes_id, $fecha, $servicio_id);
-    if (!$stmt->execute()) throw new Exception('No se pudo validar la atención: ' . $stmt->error);
+    if (!$stmt) throw new Exception('No se pudo validar la agenda de la atención: ' . $mysqli->error);
+    $stmt->bind_param('i', $agenda_id);
+    if (!$stmt->execute()) throw new Exception('No se pudo validar la agenda de la atención: ' . $stmt->error);
     $stmt->store_result();
     if ($stmt->num_rows > 0) {
-        responder('warning', 'Registro existente', 'Este paciente ya tiene una atención registrada para esta fecha y consultorio.');
+        responder('warning', 'Agenda ya procesada', 'Esta cita ya tiene una atención registrada.');
     }
     $stmt->close();
     $stmt = null;
@@ -196,18 +196,18 @@ try {
             antecedentes_medicos_psiquiatricos, historia_gineco_obstetrica,
             medicamentos_previos, medicamentos_actuales, legal, sustancias,
             rasgos_personalidad, informacion_adicional, pendientes, diagnostico, seguimiento,
-            paciente, servicio_id, colaborador_id, num_hijos, estado, fecha_registro
-        ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)'
+            paciente, servicio_id, colaborador_id, num_hijos, estado, fecha_registro, agenda_id
+        ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)'
     );
     if (!$stmt) throw new Exception('No se pudo preparar el registro de atención: ' . $mysqli->error);
     $stmt->bind_param(
-        'iiisssssssssssssssssiiiis',
+        'iiisssssssssssssssssiiiisi',
         $atencion_id, $pacientes_id, $anos, $fecha,
         $antecedentes_medicos_no_psiquiatricos, $hospitalizaciones, $cirugias, $alergias,
         $antecedentes_medicos_psiquiatricos, $historia_gineco_obstetrica,
         $medicamentos_previos, $medicamentos_actuales, $legal, $sustancias,
         $rasgos_personalidad, $informacion_adicional, $pendientes, $diagnostico, $seguimiento,
-        $tipo_paciente, $servicio_id, $colaborador_id, $num_hijos, $estado, $fecha_registro
+        $tipo_paciente, $servicio_id, $colaborador_id, $num_hijos, $estado, $fecha_registro, $agenda_id
     );
     if (!$stmt->execute() || $stmt->affected_rows !== 1) {
         throw new Exception('No se pudo registrar la atención: ' . $stmt->error);

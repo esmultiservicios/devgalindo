@@ -159,36 +159,6 @@ try {
 
     $stmt = $mysqli->prepare(
         'SELECT atencion_id FROM atenciones_medicas
-         WHERE pacientes_id = ? AND fecha = ? AND servicio_id = ? LIMIT 1'
-    );
-    if (!$stmt) throw new Exception('No se pudo preparar la validación de la atención: ' . $mysqli->error);
-    $stmt->bind_param('isi', $pacientes_id, $fecha, $servicio_id);
-    if (!$stmt->execute()) throw new Exception('No se pudo validar la atención: ' . $stmt->error);
-    $stmt->store_result();
-    if ($stmt->num_rows > 0) {
-        responder('warning', 'Registro existente', 'Este paciente ya tiene una atención registrada para la fecha y consultorio seleccionados.');
-    }
-    $stmt->close();
-    $stmt = null;
-
-    $stmt = $mysqli->prepare(
-        'SELECT agenda_id FROM agenda
-         WHERE pacientes_id = ? AND colaborador_id = ? AND servicio_id = ?
-           AND CAST(fecha_cita AS DATE) = ? AND status IN (0,1)
-         LIMIT 1'
-    );
-    if (!$stmt) throw new Exception('No se pudo preparar la validación de agenda: ' . $mysqli->error);
-    $stmt->bind_param('iiis', $pacientes_id, $colaborador_id, $servicio_id, $fecha);
-    if (!$stmt->execute()) throw new Exception('No se pudo validar la agenda: ' . $stmt->error);
-    $stmt->store_result();
-    if ($stmt->num_rows > 0) {
-        responder('warning', 'Agenda existente', 'El paciente ya cuenta con una agenda para esta fecha y consultorio. Genere la atención desde la lista de pendientes.');
-    }
-    $stmt->close();
-    $stmt = null;
-
-    $stmt = $mysqli->prepare(
-        'SELECT atencion_id FROM atenciones_medicas
          WHERE pacientes_id = ? AND colaborador_id = ? AND servicio_id = ? LIMIT 1'
     );
     if (!$stmt) throw new Exception('No se pudo validar el tipo de paciente: ' . $mysqli->error);
@@ -203,6 +173,9 @@ try {
     $atencion_id = (int) correlativo('atencion_id', 'atenciones_medicas');
     if ($atencion_id <= 0) throw new Exception('No se pudo generar el correlativo de la atención.');
 
+    $agenda_id = (int) correlativo('agenda_id', 'agenda');
+    if ($agenda_id <= 0) throw new Exception('No se pudo generar el correlativo de agenda.');
+
     $estado = 1;
     $fecha_registro = date('Y-m-d H:i:s');
 
@@ -213,18 +186,18 @@ try {
             antecedentes_medicos_psiquiatricos, historia_gineco_obstetrica,
             medicamentos_previos, medicamentos_actuales, legal, sustancias,
             rasgos_personalidad, informacion_adicional, pendientes, diagnostico, seguimiento,
-            paciente, servicio_id, colaborador_id, num_hijos, estado, fecha_registro
-        ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)'
+            paciente, servicio_id, colaborador_id, num_hijos, estado, fecha_registro, agenda_id
+        ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)'
     );
     if (!$stmt) throw new Exception('No se pudo preparar el registro de la atención: ' . $mysqli->error);
     $stmt->bind_param(
-        'iiisssssssssssssssssiiiis',
+        'iiisssssssssssssssssiiiisi',
         $atencion_id, $pacientes_id, $anos, $fecha,
         $antecedentes_medicos_no_psiquiatricos, $hospitalizaciones, $cirugias, $alergias,
         $antecedentes_medicos_psiquiatricos, $historia_gineco_obstetrica,
         $medicamentos_previos, $medicamentos_actuales, $legal, $sustancias,
         $rasgos_personalidad, $informacion_adicional, $pendientes, $diagnostico, $seguimiento,
-        $tipo_paciente, $servicio_id, $colaborador_id, $num_hijos, $estado, $fecha_registro
+        $tipo_paciente, $servicio_id, $colaborador_id, $num_hijos, $estado, $fecha_registro, $agenda_id
     );
     if (!$stmt->execute() || $stmt->affected_rows !== 1) {
         throw new Exception('No se pudo registrar la atención: ' . $stmt->error);
@@ -232,9 +205,6 @@ try {
     $atencionCreada = true;
     $stmt->close();
     $stmt = null;
-
-    $agenda_id = (int) correlativo('agenda_id', 'agenda');
-    if ($agenda_id <= 0) throw new Exception('No se pudo generar el correlativo de agenda.');
 
     $hora = '00:00';
     $fecha_cita = $fecha . ' 00:00:00';
