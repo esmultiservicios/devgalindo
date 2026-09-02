@@ -1126,7 +1126,7 @@
         paginationBusqueda(1);
         $('#formulario_buscarAtencion #pro').val("Búsqueda de Atenciones");
         $('#formulario_buscarAtencion #paciente_consulta').html("");
-        $('#formulario_buscarAtencion #agrega_registros_busqueda_').html('<td colspan="3" style="color:#C7030D">No se encontraron resultados, seleccione un paciente para visualizar sus datos</td>');
+        $('#formulario_buscarAtencion #agrega_registros_busqueda_').html('<div class="atenciones-div-empty">No se encontraron resultados, seleccione un paciente para visualizar sus datos</div>');
         $('#buscar_atencion').modal({ show: true, keyboard: false, backdrop: 'static' });
 
       } else {
@@ -1166,7 +1166,7 @@
 
         $('#formulario_buscarAtencion #paciente_consulta').html('');
         $('#formulario_buscarAtencion #agrega_registros_busqueda_').html(
-          '<td colspan="12" style="color:#C7030D">No se encontraron resultados</td>'
+          '<div class="atenciones-div-empty">No se encontraron resultados</div>'
         );
         $('#formulario_buscarAtencion #pagination_busqueda_').html('');
       });
@@ -2173,6 +2173,97 @@ window.inicializarSpeechRecognition = function (limites) {
   });
 };
 
+  function escaparHtmlAtencion(texto) {
+    return $('<div>').text(texto == null ? '' : String(texto)).html();
+  }
+
+  function convertirTablaAtencionesADivs(html) {
+    var contenido = html == null ? '' : String(html);
+    var $tmp = $('<div>').html(contenido);
+    var $tabla = $tmp.find('table').first();
+
+    if (!$tabla.length) {
+      return contenido;
+    }
+
+    var encabezados = [];
+    $tabla.find('thead th').each(function () {
+      encabezados.push($.trim($(this).text()));
+    });
+
+    if (!encabezados.length) {
+      $tabla.find('tr').first().find('th,td').each(function () {
+        encabezados.push($.trim($(this).text()));
+      });
+    }
+
+    var encabezadosDefault = ['Fecha', 'Hora', 'Paciente', 'Identidad', 'Teléfono', 'Servicio', 'Estatus', 'Observación', 'Comentario', 'Acciones'];
+    if (!encabezados.length) encabezados = encabezadosDefault.slice();
+
+    var filas = [];
+    var $filas = $tabla.find('tbody tr');
+    if (!$filas.length) $filas = $tabla.find('tr').slice(1);
+
+    $filas.each(function () {
+      var $celdas = $(this).find('td');
+      if (!$celdas.length) return;
+
+      if ($celdas.length === 1 && (parseInt($celdas.attr('colspan'), 10) > 1 || /no se encontraron|sin resultados|no hay/i.test($celdas.text()))) {
+        filas.push({ vacia: true, texto: $.trim($celdas.text()) || 'No se encontraron resultados' });
+        return;
+      }
+
+      var celdas = [];
+      $celdas.each(function (i) {
+        celdas.push({
+          label: encabezados[i] || encabezadosDefault[i] || ('Dato ' + (i + 1)),
+          html: $(this).html()
+        });
+      });
+      filas.push({ vacia: false, celdas: celdas });
+    });
+
+    if (!filas.length) {
+      var texto = $.trim($tabla.text());
+      var salidaVacia = '<div class="atenciones-div-list" data-cols="10">' +
+        '<div class="atenciones-div-header">' +
+          '<div>Fecha</div><div>Hora</div><div>Paciente</div><div>Identidad</div><div>Teléfono</div>' +
+          '<div>Servicio</div><div>Estatus</div><div>Observación</div><div>Comentario</div><div>Acciones</div>' +
+        '</div>' +
+        '<div class="atenciones-div-empty">' + escaparHtmlAtencion(texto || 'No se encontraron resultados') + '</div>' +
+      '</div>';
+      return salidaVacia;
+    }
+
+    var primeraFilaNormal = filas.find(function (f) { return !f.vacia; });
+    var columnas = primeraFilaNormal ? primeraFilaNormal.celdas.length : (encabezados.length || encabezadosDefault.length);
+    var salida = '<div class="atenciones-div-list" data-cols="' + columnas + '">';
+    var gridStyle = columnas === 10 ? '' : ' style="grid-template-columns:repeat(' + columnas + ',minmax(120px,1fr));"';
+    var labelsHeader = primeraFilaNormal ? primeraFilaNormal.celdas.map(function (celda) { return celda.label; }) : (encabezados.length ? encabezados : encabezadosDefault);
+    salida += '<div class="atenciones-div-header"' + gridStyle + '>';
+    labelsHeader.forEach(function (label) {
+      salida += '<div>' + escaparHtmlAtencion(label) + '</div>';
+    });
+    salida += '</div>';
+
+    filas.forEach(function (fila) {
+      if (fila.vacia) {
+        salida += '<div class="atenciones-div-empty">' + escaparHtmlAtencion(fila.texto) + '</div>';
+        return;
+      }
+      salida += '<div class="atenciones-div-row"' + gridStyle + '>';
+      fila.celdas.forEach(function (celda) {
+        salida += '<div class="atenciones-div-cell">' +
+          '<span class="atenciones-cell-label">' + escaparHtmlAtencion(celda.label) + '</span>' +
+          '<div class="atenciones-cell-value">' + celda.html + '</div>' +
+        '</div>';
+      });
+      salida += '</div>';
+    });
+    salida += '</div>';
+    return salida;
+  }
+
   // ============================
   // PAGINACION (ANTES: eval)
   // ============================
@@ -2225,7 +2316,7 @@ window.inicializarSpeechRecognition = function (limites) {
           return;
         }
 
-        $('#agrega-registros-atenciones').html(respuesta.html);
+        $('#agrega-registros-atenciones').html(convertirTablaAtencionesADivs(respuesta.html));
         $('#pagination-atenciones').html(respuesta.pagination);
         estadoCargaInicial.listadoCargado = true;
       },
@@ -2269,7 +2360,7 @@ window.inicializarSpeechRecognition = function (limites) {
       success: function (data) {
         try {
           var array = parseServerPayload(data, "paginar_buscar.php");
-          $('#formulario_buscarAtencion #agrega_registros_busqueda').html(array[0]);
+          $('#formulario_buscarAtencion #agrega_registros_busqueda').html(convertirTablaAtencionesADivs(array[0]));
           $('#formulario_buscarAtencion #pagination_busqueda').html(array[1]);
         } catch (e) {
           console.error(e);
@@ -2319,7 +2410,7 @@ window.inicializarSpeechRecognition = function (limites) {
               $('#formulario_buscarAtencion #paciente_consulta').html('<b>Paciente:</b>');
             });
 
-          $('#formulario_buscarAtencion #agrega_registros_busqueda_').html(array[0]);
+          $('#formulario_buscarAtencion #agrega_registros_busqueda_').html(convertirTablaAtencionesADivs(array[0]));
           $('#formulario_buscarAtencion #pagination_busqueda_').html(array[1]);
         } catch (e) {
           console.error(e);
@@ -2930,5 +3021,295 @@ window.inicializarSpeechRecognition = function (limites) {
     return $.Deferred().resolve(convertDate(new Date())).promise();
   };
 
+})(jQuery);
+</script>
+<script>
+(function ($) {
+  'use strict';
+
+  /* Todos los modales de este módulo: NO cerrar al hacer click afuera. */
+  if ($.fn.modal && $.fn.modal.Constructor && $.fn.modal.Constructor.Default) {
+    $.fn.modal.Constructor.Default.backdrop = 'static';
+    $.fn.modal.Constructor.Default.keyboard = true;
+  }
+
+  var opcionesPacientesExpediente = [];
+  var pacienteExpedienteSeleccionado = 0;
+  var datosPacienteExpedienteSeleccionado = null;
+
+  function escapeHtml(valor) {
+    return $('<div>').text(valor == null ? '' : String(valor)).html();
+  }
+
+  function valorLimpio(valor) {
+    var v = $.trim(valor == null ? '' : String(valor));
+    return v === '' ? 'No registrado' : v;
+  }
+
+  function obtenerPacienteExpedienteActual() {
+    var paciente = $('#formulario_atenciones #paciente_consulta').val() || $('#formulario_atenciones #pacientes_id').val();
+    paciente = parseInt(paciente, 10);
+    return Number.isFinite(paciente) && paciente > 0 ? paciente : 0;
+  }
+
+  function datosExpedienteDesdeFormulario() {
+    return {
+      identidad: $('#formulario_atenciones #identidad').val() || '',
+      nombre: $('#formulario_atenciones #nombre').val() || '',
+      edad: $('#formulario_atenciones #edad').val() || '',
+      procedencia: $('#formulario_atenciones #procedencia').val() || '',
+      religion: $('#formulario_atenciones #religion_id').val() || '',
+      profesion: $('#formulario_atenciones #profesion_id').val() || '',
+      estadoCivil: $('#formulario_atenciones #estado_civil').val() || '',
+      escolaridad: $('#formulario_atenciones #escolaridad').val() || '',
+      telefono: $('#formulario_atenciones #telefono1').val() || ''
+    };
+  }
+
+  function actualizarBotonExpedienteActual() {
+    $('#descargar-expediente-pdf').prop('disabled', obtenerPacienteExpedienteActual() <= 0);
+  }
+
+  function construirUrlExpediente(pacienteId, descargar, datos) {
+    var url = '<?php echo SERVERURL; ?>php/atencion_pacientes/expedientePacientePDF.php?paciente_id=' + encodeURIComponent(pacienteId);
+    datos = datos || {};
+    var etiquetas = {
+      profesion_label: datos.profesion,
+      religion_label: datos.religion,
+      estado_civil_label: datos.estadoCivil,
+      escolaridad_label: datos.escolaridad
+    };
+    Object.keys(etiquetas).forEach(function (clave) {
+      var valor = $.trim(etiquetas[clave] || '');
+      if (valor) url += '&' + clave + '=' + encodeURIComponent(valor);
+    });
+    if (descargar) url += '&download=1';
+    return url;
+  }
+
+  var visorExpedienteDesdeBusqueda = false;
+
+  function visualizarExpedientePaciente(pacienteId, datos, desdeBusqueda) {
+    pacienteId = parseInt(pacienteId, 10);
+    if (!Number.isFinite(pacienteId) || pacienteId <= 0) {
+      swal({ title: 'Paciente requerido', text: 'Seleccione un paciente antes de visualizar el expediente.', icon: 'warning', closeOnEsc: false, closeOnClickOutside: false });
+      return;
+    }
+
+    datos = datos || datosExpedienteDesdeFormulario();
+    var urlVista = construirUrlExpediente(pacienteId, false, datos);
+    var urlDescarga = construirUrlExpediente(pacienteId, true, datos);
+    $('#visor_expediente_pdf').attr('src', urlVista);
+    $('#descargar_expediente_desde_visor').attr('href', urlDescarga);
+
+    visorExpedienteDesdeBusqueda = !!desdeBusqueda;
+    $('#volver_busqueda_expediente').toggleClass('d-none', !visorExpedienteDesdeBusqueda);
+
+    var mostrarVisor = function () {
+      $('#modal_visualizar_expediente_pdf').modal({ show: true, keyboard: true, backdrop: 'static' });
+    };
+
+    if ($('#modal_buscar_expediente_pdf').hasClass('show')) {
+      $('#modal_buscar_expediente_pdf').one('hidden.bs.modal.expedienteVisor', mostrarVisor).modal('hide');
+    } else {
+      mostrarVisor();
+    }
+  }
+
+  function extraerOpcionesPacientes(html) {
+    var $contenedor = $('<select>').html(html || '');
+    var opciones = [];
+    $contenedor.find('option').each(function () {
+      var valor = $.trim($(this).val());
+      var texto = $.trim($(this).text());
+      if (valor && texto) opciones.push({ valor: valor, texto: texto });
+    });
+    return opciones;
+  }
+
+  function iniciales(nombre) {
+    var partes = $.trim(nombre || '').split(/\s+/).filter(Boolean);
+    if (!partes.length) return 'P';
+    return ((partes[0][0] || '') + (partes.length > 1 ? partes[1][0] : '')).toUpperCase();
+  }
+
+  function renderizarResultadosPacientes(filtro) {
+    var termino = $.trim(filtro || '').toLowerCase();
+    var visibles = opcionesPacientesExpediente.filter(function (opcion) {
+      return !termino || opcion.texto.toLowerCase().indexOf(termino) !== -1 || String(opcion.valor).toLowerCase().indexOf(termino) !== -1;
+    }).slice(0, 80);
+
+    var $contenedor = $('#pacientes_expediente_resultados');
+    if (!visibles.length) {
+      $contenedor.html('<div class="expediente-empty"><i class="fas fa-user-slash mr-1"></i> No se encontraron pacientes.</div>');
+      return;
+    }
+
+    var html = '';
+    visibles.forEach(function (opcion) {
+      var activo = parseInt(opcion.valor, 10) === pacienteExpedienteSeleccionado ? ' active' : '';
+      html += '<button type="button" class="expediente-resultado-item' + activo + '" data-paciente-id="' + escapeHtml(opcion.valor) + '">' +
+        '<span class="expediente-avatar">' + escapeHtml(iniciales(opcion.texto)) + '</span>' +
+        '<span><span class="expediente-resultado-nombre">' + escapeHtml(opcion.texto) + '</span>' +
+        '<span class="expediente-resultado-meta">Seleccione para ver sus datos antes de generar el PDF.</span></span>' +
+        '<i class="fas fa-chevron-right text-muted"></i>' +
+      '</button>';
+    });
+    $contenedor.html(html);
+  }
+
+  function renderizarPacienteSeleccionado(datos) {
+    var $preview = $('#paciente_expediente_seleccionado');
+    if (!datos) {
+      $preview.removeClass('show').empty();
+      return;
+    }
+    var html = '<div class="expediente-seleccionado-title"><i class="fas fa-user-circle mr-2"></i>' + escapeHtml(valorLimpio(datos.nombre)) + '</div>' +
+      '<div class="expediente-mini-grid">' +
+        miniDato('Identidad', datos.identidad) +
+        miniDato('Edad', datos.edad ? datos.edad + ' años' : '') +
+        miniDato('Teléfono', datos.telefono) +
+        miniDato('Procedencia', datos.procedencia) +
+        miniDato('Profesión', datos.profesion) +
+        miniDato('Escolaridad', datos.escolaridad) +
+        miniDato('Estado civil', datos.estadoCivil) +
+        miniDato('Religión', datos.religion) +
+      '</div>';
+    $preview.html(html).addClass('show');
+  }
+
+  function miniDato(etiqueta, valor) {
+    return '<div class="expediente-mini-dato"><span class="expediente-mini-label">' + escapeHtml(etiqueta) + '</span><span class="expediente-mini-value">' + escapeHtml(valorLimpio(valor)) + '</span></div>';
+  }
+
+  function cargarDetallePacienteExpediente(pacienteId) {
+    pacienteId = parseInt(pacienteId, 10);
+    if (!Number.isFinite(pacienteId) || pacienteId <= 0) return;
+
+    pacienteExpedienteSeleccionado = pacienteId;
+    datosPacienteExpedienteSeleccionado = null;
+    $('#descargar-expediente-buscado').prop('disabled', true);
+    $('#paciente_expediente_seleccionado').html('<div class="expediente-empty"><i class="fas fa-spinner fa-spin mr-1"></i> Cargando datos del paciente...</div>').addClass('show');
+    renderizarResultadosPacientes($('#buscar_paciente_expediente_pdf').val());
+
+    $.ajax({
+      type: 'POST',
+      url: '<?php echo SERVERURL; ?>php/atencion_pacientes/buscar_expediente.php',
+      data: { pacientes_id: pacienteId },
+      dataType: 'text',
+      cache: false,
+      timeout: 30000
+    }).done(function (raw) {
+      try {
+        var array = (typeof raw === 'object') ? raw : JSON.parse(raw);
+        if (!Array.isArray(array)) {
+          try { array = (new Function('return (' + raw + ')'))(); } catch (_) {}
+        }
+        if (!Array.isArray(array)) throw new Error('Formato no válido');
+        datosPacienteExpedienteSeleccionado = {
+          identidad: array[0] || '',
+          nombre: array[1] || '',
+          edad: array[2] || '',
+          procedencia: array[3] || '',
+          religion: array[4] || '',
+          profesion: array[5] || '',
+          estadoCivil: array[13] || '',
+          escolaridad: array[27] || '',
+          telefono: array[30] || ''
+        };
+        renderizarPacienteSeleccionado(datosPacienteExpedienteSeleccionado);
+        $('#descargar-expediente-buscado').prop('disabled', false);
+      } catch (e) {
+        console.error('No se pudo interpretar buscar_expediente.php:', e, raw);
+        renderizarPacienteSeleccionado(null);
+        swal({ title: 'Error', text: 'No se pudieron cargar los datos del paciente seleccionado.', icon: 'error', closeOnEsc: false, closeOnClickOutside: false });
+      }
+    }).fail(function (xhr, status) {
+      if (status === 'abort') return;
+      renderizarPacienteSeleccionado(null);
+      swal({ title: 'Error', text: 'No se pudieron cargar los datos del paciente seleccionado.', icon: 'error', closeOnEsc: false, closeOnClickOutside: false });
+    });
+  }
+
+  function abrirBuscadorExpediente() {
+    pacienteExpedienteSeleccionado = 0;
+    datosPacienteExpedienteSeleccionado = null;
+    $('#buscar_paciente_expediente_pdf').val('');
+    $('#descargar-expediente-buscado').prop('disabled', true);
+    $('#paciente_expediente_seleccionado').removeClass('show').empty();
+    $('#pacientes_expediente_resultados').html('<div class="expediente-empty"><i class="fas fa-spinner fa-spin mr-1"></i> Cargando pacientes...</div>');
+    $('#modal_buscar_expediente_pdf').modal({ show: true, keyboard: true, backdrop: 'static' });
+
+    if (opcionesPacientesExpediente.length) {
+      renderizarResultadosPacientes('');
+      setTimeout(function () { $('#buscar_paciente_expediente_pdf').trigger('focus'); }, 120);
+      return;
+    }
+
+    if (typeof window.obtenerCatalogoPacientesHtml !== 'function') {
+      $('#pacientes_expediente_resultados').html('<div class="expediente-empty">No se pudo acceder al catálogo de pacientes.</div>');
+      return;
+    }
+
+    window.obtenerCatalogoPacientesHtml()
+      .done(function (html) {
+        opcionesPacientesExpediente = extraerOpcionesPacientes(html);
+        renderizarResultadosPacientes('');
+        setTimeout(function () { $('#buscar_paciente_expediente_pdf').trigger('focus'); }, 120);
+      })
+      .fail(function (xhr, status) {
+        if (status === 'abort') return;
+        $('#pacientes_expediente_resultados').html('<div class="expediente-empty">No se pudo cargar el listado de pacientes.</div>');
+        swal({ title: 'Error', text: 'No se pudo cargar el listado de pacientes.', icon: 'error', closeOnEsc: false, closeOnClickOutside: false });
+      });
+  }
+
+  $(document).off('change.expedientePdf', '#formulario_atenciones #paciente_consulta')
+    .on('change.expedientePdf', '#formulario_atenciones #paciente_consulta', actualizarBotonExpedienteActual);
+
+  $(document).off('click.expedientePdf', '#descargar-expediente-pdf')
+    .on('click.expedientePdf', '#descargar-expediente-pdf', function () {
+      visualizarExpedientePaciente(obtenerPacienteExpedienteActual(), datosExpedienteDesdeFormulario(), false);
+    });
+
+  $(document).off('click.expedientePdf', '#buscar-expediente-pdf, #buscar-expediente-pdf-principal')
+    .on('click.expedientePdf', '#buscar-expediente-pdf, #buscar-expediente-pdf-principal', abrirBuscadorExpediente);
+
+  $(document).off('input.expedientePdf', '#buscar_paciente_expediente_pdf')
+    .on('input.expedientePdf', '#buscar_paciente_expediente_pdf', function () { renderizarResultadosPacientes($(this).val()); });
+
+  $(document).off('click.expedientePdf', '.expediente-resultado-item')
+    .on('click.expedientePdf', '.expediente-resultado-item', function () { cargarDetallePacienteExpediente($(this).data('paciente-id')); });
+
+  $(document).off('dblclick.expedientePdf', '.expediente-resultado-item')
+    .on('dblclick.expedientePdf', '.expediente-resultado-item', function () {
+      var id = parseInt($(this).data('paciente-id'), 10);
+      if (id > 0 && datosPacienteExpedienteSeleccionado) visualizarExpedientePaciente(id, datosPacienteExpedienteSeleccionado, true);
+    });
+
+  $(document).off('click.expedientePdf', '#descargar-expediente-buscado')
+    .on('click.expedientePdf', '#descargar-expediente-buscado', function () {
+      visualizarExpedientePaciente(pacienteExpedienteSeleccionado, datosPacienteExpedienteSeleccionado || {}, true);
+    });
+
+  $(document).off('click.expedientePdf', '#volver_busqueda_expediente')
+    .on('click.expedientePdf', '#volver_busqueda_expediente', function () {
+      if (!visorExpedienteDesdeBusqueda) return;
+      $('#modal_visualizar_expediente_pdf').one('hidden.bs.modal.volverBusqueda', function () {
+        $('#modal_buscar_expediente_pdf').modal({ show: true, keyboard: true, backdrop: 'static' });
+        setTimeout(function () { $('#buscar_paciente_expediente_pdf').trigger('focus'); }, 120);
+      }).modal('hide');
+    });
+
+  $('#modal_visualizar_expediente_pdf').off('hidden.bs.modal.expedientePdf').on('hidden.bs.modal.expedientePdf', function () {
+    $('#visor_expediente_pdf').attr('src', 'about:blank');
+    $('#descargar_expediente_desde_visor').attr('href', '#');
+  });
+
+  $(document).off('click.expedientePdfReset', '#limpiar-registro-atenciones')
+    .on('click.expedientePdfReset', '#limpiar-registro-atenciones', function () { setTimeout(actualizarBotonExpedienteActual, 0); });
+
+  $(document).ajaxComplete(function () { setTimeout(actualizarBotonExpedienteActual, 0); });
+  $(document).ready(function () { actualizarBotonExpedienteActual(); });
 })(jQuery);
 </script>

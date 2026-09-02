@@ -179,6 +179,123 @@
     }
 
 
+    .btn-expediente-pdf {
+        background: #0f7f8d;
+        border-color: #0f7f8d;
+        color: #fff;
+        font-weight: 600;
+    }
+    .btn-expediente-pdf:hover,
+    .btn-expediente-pdf:focus { background: #0b6975; border-color: #0b6975; color: #fff; }
+
+    #modal_buscar_expediente_pdf .modal-dialog {
+        max-width: 900px;
+        width: calc(100% - 30px);
+        height: min(760px, calc(100vh - 30px));
+        margin: 15px auto;
+    }
+    #modal_buscar_expediente_pdf .modal-content,
+    #modal_visualizar_expediente_pdf .modal-content {
+        border: 0;
+        border-radius: 14px;
+        overflow: hidden;
+        box-shadow: 0 18px 45px rgba(15, 23, 42, .22);
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+    }
+    #modal_buscar_expediente_pdf .modal-header,
+    #modal_visualizar_expediente_pdf .modal-header {
+        background: #0f7f8d;
+        color: #fff;
+        border-bottom: 0;
+        padding: 16px 20px;
+    }
+    #modal_buscar_expediente_pdf .modal-header .close,
+    #modal_visualizar_expediente_pdf .modal-header .close { color: #fff; opacity: 1; text-shadow: none; }
+    #modal_buscar_expediente_pdf .modal-body { padding: 20px !important; background: #f7f9fa; flex: 1 1 auto; min-height: 0; overflow-y: auto; }
+    #modal_buscar_expediente_pdf .expediente-search-box {
+        background: #fff;
+        border: 1px solid #dce6ea;
+        border-radius: 12px;
+        padding: 16px;
+        min-height: 100%;
+    }
+    #modal_buscar_expediente_pdf .expediente-search-input-wrap { position: relative; }
+    #modal_buscar_expediente_pdf .expediente-search-input-wrap i {
+        position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: #73808c;
+    }
+    #modal_buscar_expediente_pdf #buscar_paciente_expediente_pdf { height: 44px; padding-left: 40px; border-radius: 8px; }
+    #modal_buscar_expediente_pdf .expediente-resultados {
+        margin-top: 12px;
+        max-height: 270px;
+        overflow-y: auto;
+        border: 1px solid #e1e8eb;
+        border-radius: 10px;
+        background: #fff;
+    }
+    #modal_buscar_expediente_pdf .expediente-resultado-item {
+        display: grid;
+        grid-template-columns: 42px minmax(0,1fr) auto;
+        gap: 10px;
+        align-items: center;
+        width: 100%;
+        padding: 11px 12px;
+        border: 0;
+        border-bottom: 1px solid #edf1f3;
+        background: #fff;
+        text-align: left;
+        cursor: pointer;
+    }
+    #modal_buscar_expediente_pdf .expediente-resultado-item:last-child { border-bottom: 0; }
+    #modal_buscar_expediente_pdf .expediente-resultado-item:hover,
+    #modal_buscar_expediente_pdf .expediente-resultado-item.active { background: #f0f9fa; }
+    #modal_buscar_expediente_pdf .expediente-avatar {
+        width: 38px; height: 38px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+        background: #e5f5f7; color: #0f7f8d; font-weight: 700;
+    }
+    #modal_buscar_expediente_pdf .expediente-resultado-nombre { font-weight: 700; color: #23313c; line-height: 1.2; }
+    #modal_buscar_expediente_pdf .expediente-resultado-meta { font-size: .78rem; color: #74818d; margin-top: 3px; }
+    #modal_buscar_expediente_pdf .expediente-seleccionado {
+        margin-top: 14px;
+        border: 1px solid #cfe1e5;
+        border-left: 4px solid #0f7f8d;
+        border-radius: 10px;
+        background: #fff;
+        padding: 14px;
+        display: none;
+    }
+    #modal_buscar_expediente_pdf .expediente-seleccionado.show { display: block; }
+    #modal_buscar_expediente_pdf .expediente-seleccionado-title { font-weight: 700; font-size: 1rem; color: #21313c; margin-bottom: 10px; }
+    #modal_buscar_expediente_pdf .expediente-mini-grid { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 8px 14px; }
+    #modal_buscar_expediente_pdf .expediente-mini-dato { min-width: 0; }
+    #modal_buscar_expediente_pdf .expediente-mini-label { display: block; font-size: .7rem; font-weight: 700; color: #7a8792; text-transform: uppercase; }
+    #modal_buscar_expediente_pdf .expediente-mini-value { display: block; color: #263642; overflow-wrap: anywhere; }
+    #modal_buscar_expediente_pdf .expediente-empty { padding: 24px 14px; text-align: center; color: #77838e; }
+    #modal_buscar_expediente_pdf .modal-footer { border-top: 1px solid #e5ecef; background: #fff; padding: 12px 20px; }
+
+    #modal_visualizar_expediente_pdf .modal-dialog {
+        max-width: 1100px;
+        width: calc(100% - 30px);
+        height: calc(100vh - 30px);
+        margin: 15px auto;
+    }
+    #modal_visualizar_expediente_pdf .modal-body { padding: 0; background: #eef3f5; flex: 1 1 auto; min-height: 0; overflow: hidden; }
+    #visor_expediente_pdf { width: 100%; height: 100%; min-height: 0; border: 0; display: block; background: #fff; }
+
+    @media (max-width: 767.98px) {
+        #modal_buscar_expediente_pdf .modal-dialog,
+        #modal_visualizar_expediente_pdf .modal-dialog { width: calc(100% - 12px); height: calc(100vh - 12px); margin: 6px auto; }
+        #modal_buscar_expediente_pdf .modal-body { padding: 14px !important; }
+        #modal_buscar_expediente_pdf .expediente-mini-grid { grid-template-columns: 1fr 1fr; }
+        #visor_expediente_pdf { height: 100%; min-height: 0; }
+    }
+    @media (max-width: 480px) {
+        #modal_buscar_expediente_pdf .expediente-mini-grid { grid-template-columns: 1fr; }
+        #modal_buscar_expediente_pdf .expediente-resultado-item { grid-template-columns: 38px minmax(0,1fr); }
+        #modal_buscar_expediente_pdf .expediente-resultado-item .fa-chevron-right { display: none; }
+    }
+
     @media (max-width: 767.98px) {
         #atencionMedica .sticky-buttons {
             position: static;
@@ -196,6 +313,12 @@
             <button class="btn btn-primary mr-2 mb-2" type="button" id="limpiar-registro-atenciones"
                 form="formulario_atenciones">
                 <div class="sb-nav-link-icon"></div><i class="fas fa-plus fa-lg"></i> Nuevo Registro
+            </button>
+            <button class="btn btn-expediente-pdf mr-2 mb-2" type="button" id="descargar-expediente-pdf" disabled>
+                <i class="fas fa-file-pdf fa-lg mr-1"></i> Ver PDF del Paciente
+            </button>
+            <button class="btn btn-secondary mr-2 mb-2" type="button" id="buscar-expediente-pdf">
+                <i class="fas fa-search fa-lg mr-1"></i> Buscar Expediente
             </button>
             <button class="btn btn-primary mr-2 mb-2" type="submit" id="edi_atencion" form="formulario_atenciones">
                 <div class="sb-nav-link-icon"></div><i class="far fa-save fa-lg"></i> Registrar
@@ -709,4 +832,57 @@
             </div>
         </div>
     </form>
+</div>
+
+<div class="modal fade" id="modal_buscar_expediente_pdf" tabindex="-1" role="dialog" aria-labelledby="titulo_buscar_expediente_pdf" aria-hidden="true" data-backdrop="static" data-keyboard="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div>
+                    <h5 class="modal-title mb-1" id="titulo_buscar_expediente_pdf"><i class="fas fa-folder-open mr-2"></i>Buscar expediente</h5>
+                    <small>Busque y seleccione el paciente para revisar su expediente clínico.</small>
+                </div>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Cerrar"><span aria-hidden="true">&times;</span></button>
+            </div>
+            <div class="modal-body">
+                <div class="expediente-search-box">
+                    <label for="buscar_paciente_expediente_pdf" class="font-weight-bold mb-2">Paciente</label>
+                    <div class="expediente-search-input-wrap">
+                        <i class="fas fa-search"></i>
+                        <input type="text" id="buscar_paciente_expediente_pdf" class="form-control" placeholder="Escriba nombre, identidad o expediente" autocomplete="off">
+                    </div>
+                    <div id="pacientes_expediente_resultados" class="expediente-resultados">
+                        <div class="expediente-empty"><i class="fas fa-spinner fa-spin mr-1"></i> Cargando pacientes...</div>
+                    </div>
+                    <div id="paciente_expediente_seleccionado" class="expediente-seleccionado"></div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal"><i class="fas fa-times mr-1"></i> Cancelar</button>
+                <button type="button" class="btn btn-expediente-pdf" id="descargar-expediente-buscado" disabled><i class="fas fa-eye mr-1"></i> Visualizar PDF</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="modal_visualizar_expediente_pdf" tabindex="-1" role="dialog" aria-labelledby="titulo_visualizar_expediente_pdf" aria-hidden="true" data-backdrop="static" data-keyboard="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered" role="document">
+        <div class="modal-content">
+            <div class="modal-header align-items-center">
+                <div>
+                    <h5 class="modal-title mb-0" id="titulo_visualizar_expediente_pdf"><i class="fas fa-file-pdf mr-2"></i>Expediente clínico del paciente</h5>
+                    <small>Vista previa en tamaño carta</small>
+                </div>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Cerrar"><span aria-hidden="true">&times;</span></button>
+            </div>
+            <div class="modal-body">
+                <iframe id="visor_expediente_pdf" title="Vista previa del expediente clínico"></iframe>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-info d-none" id="volver_busqueda_expediente"><i class="fas fa-arrow-left mr-1"></i> Volver a la búsqueda</button>
+                <button type="button" class="btn btn-secondary" data-dismiss="modal"><i class="fas fa-times mr-1"></i> Cerrar</button>
+                <a class="btn btn-expediente-pdf" id="descargar_expediente_desde_visor" href="#" target="_blank" rel="noopener"><i class="fas fa-download mr-1"></i> Descargar PDF</a>
+            </div>
+        </div>
+    </div>
 </div>
