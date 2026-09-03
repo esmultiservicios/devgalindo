@@ -67,19 +67,67 @@ function etiquetaGet($clave)
 $stmt = $mysqli->prepare(
     'SELECT p.pacientes_id, p.nombre, p.apellido, p.identidad, p.expediente, p.fecha_nacimiento,
             p.localidad, p.red_apoyo, p.terapeuta_actual, p.telefono1,
-            ec.nombre AS estado_civil_nombre,
-            r.nombre AS religion_nombre,
-            pr.nombre AS profesion_nombre,
-            esc.nombre AS escolaridad_nombre
+            CASE
+                WHEN TRIM(COALESCE(p.estado_civil_texto, \'\')) <> \'\'
+                     AND TRIM(p.estado_civil_texto) NOT REGEXP \'^[0-9]+$\'
+                    THEN TRIM(p.estado_civil_texto)
+                WHEN ec_texto.nombre IS NOT NULL THEN ec_texto.nombre
+                ELSE ec_id.nombre
+            END AS estado_civil_nombre,
+            CASE
+                WHEN TRIM(COALESCE(p.religion_texto, \'\')) <> \'\'
+                     AND TRIM(p.religion_texto) NOT REGEXP \'^[0-9]+$\'
+                    THEN TRIM(p.religion_texto)
+                WHEN r_texto.nombre IS NOT NULL THEN r_texto.nombre
+                ELSE r_id.nombre
+            END AS religion_nombre,
+            CASE
+                WHEN TRIM(COALESCE(p.profesion_texto, \'\')) <> \'\'
+                     AND TRIM(p.profesion_texto) NOT REGEXP \'^[0-9]+$\'
+                    THEN TRIM(p.profesion_texto)
+                WHEN pr_texto.nombre IS NOT NULL THEN pr_texto.nombre
+                ELSE pr_id.nombre
+            END AS profesion_nombre,
+            CASE
+                WHEN TRIM(COALESCE(p.escolaridad_texto, \'\')) <> \'\'
+                     AND TRIM(p.escolaridad_texto) NOT REGEXP \'^[0-9]+$\'
+                    THEN TRIM(p.escolaridad_texto)
+                WHEN esc_texto.nombre IS NOT NULL THEN esc_texto.nombre
+                ELSE esc_id.nombre
+            END AS escolaridad_nombre
      FROM pacientes p
-     LEFT JOIN estado_civil ec
-            ON ec.estado_civil_id = CAST(NULLIF(p.estado_civil_texto, \'\') AS UNSIGNED)
-     LEFT JOIN religion r
-            ON r.religion_id = CAST(NULLIF(p.religion_texto, \'\') AS UNSIGNED)
-     LEFT JOIN profesion pr
-            ON pr.profesion_id = CAST(NULLIF(p.profesion_texto, \'\') AS UNSIGNED)
-     LEFT JOIN escolaridad esc
-            ON esc.escolaridad_id = CAST(NULLIF(p.escolaridad_texto, \'\') AS UNSIGNED)
+     LEFT JOIN estado_civil ec_id
+            ON ec_id.estado_civil_id = p.estado_civil
+     LEFT JOIN estado_civil ec_texto
+            ON ec_texto.estado_civil_id = CASE
+                WHEN TRIM(COALESCE(p.estado_civil_texto, \'\')) REGEXP \'^[0-9]+$\'
+                    THEN CAST(TRIM(p.estado_civil_texto) AS UNSIGNED)
+                ELSE NULL
+            END
+     LEFT JOIN religion r_id
+            ON r_id.religion_id = p.religion_id
+     LEFT JOIN religion r_texto
+            ON r_texto.religion_id = CASE
+                WHEN TRIM(COALESCE(p.religion_texto, \'\')) REGEXP \'^[0-9]+$\'
+                    THEN CAST(TRIM(p.religion_texto) AS UNSIGNED)
+                ELSE NULL
+            END
+     LEFT JOIN profesion pr_id
+            ON pr_id.profesion_id = p.profesion_id
+     LEFT JOIN profesion pr_texto
+            ON pr_texto.profesion_id = CASE
+                WHEN TRIM(COALESCE(p.profesion_texto, \'\')) REGEXP \'^[0-9]+$\'
+                    THEN CAST(TRIM(p.profesion_texto) AS UNSIGNED)
+                ELSE NULL
+            END
+     LEFT JOIN escolaridad esc_id
+            ON esc_id.escolaridad_id = p.escolaridad
+     LEFT JOIN escolaridad esc_texto
+            ON esc_texto.escolaridad_id = CASE
+                WHEN TRIM(COALESCE(p.escolaridad_texto, \'\')) REGEXP \'^[0-9]+$\'
+                    THEN CAST(TRIM(p.escolaridad_texto) AS UNSIGNED)
+                ELSE NULL
+            END
      WHERE p.pacientes_id = ?
      LIMIT 1'
 );
@@ -123,13 +171,21 @@ while ($fila = $resultado->fetch_assoc()) {
 $stmt->close();
 $mysqli->close();
 
-if (count($atenciones) === 0) {
-    http_response_code(404);
-    exit('El paciente no tiene atenciones registradas para este profesional.');
-}
-
-$ultima = $atenciones[0];
+$tieneAtenciones = count($atenciones) > 0;
+$ultima = $tieneAtenciones ? $atenciones[0] : null;
 $nombreCompleto = trim($paciente['nombre'] . ' ' . $paciente['apellido']);
+
+function edadDesdeNacimiento($fechaNacimiento)
+{
+    if (!$fechaNacimiento) return '';
+    try {
+        $nacimiento = new DateTime($fechaNacimiento);
+        $hoy = new DateTime('today');
+        return (string) $nacimiento->diff($hoy)->y;
+    } catch (Exception $e) {
+        return '';
+    }
+}
 
 $profesionMostrada = valorSeguro($paciente['profesion_nombre']);
 $religionMostrada = valorSeguro($paciente['religion_nombre']);
@@ -414,45 +470,57 @@ $pdf->twoColumnRows(array(
     array('Expediente', valorSeguro($paciente['expediente'])),
     array('Identidad', valorSeguro($paciente['identidad'])),
     array('Fecha de nacimiento', fechaLegible($paciente['fecha_nacimiento'])),
-    array('Edad última atención', valorSeguro($ultima['edad']) . ' años'),
+    array(
+        $tieneAtenciones ? 'Edad última atención' : 'Edad actual',
+        ($tieneAtenciones ? valorSeguro($ultima['edad']) : valorSeguro(edadDesdeNacimiento($paciente['fecha_nacimiento']))) . ' años'
+    ),
     array('Teléfono', valorSeguro($paciente['telefono1'])),
     array('Dirección / procedencia', valorSeguro($paciente['localidad'])),
     array('Estado civil', $estadoCivilMostrado),
     array('Religión', $religionMostrada),
     array('Profesión', $profesionMostrada),
     array('Escolaridad', $escolaridadMostrada),
-    array('Número de hijos', valorSeguro($ultima['num_hijos'])),
+    array('Número de hijos', $tieneAtenciones ? valorSeguro($ultima['num_hijos']) : 'No registrado'),
     array('Red de apoyo', valorSeguro($paciente['red_apoyo'])),
     array('Terapeuta actual', valorSeguro($paciente['terapeuta_actual']))
 ));
 
-$pdf->title('2. Historia clínica actualizada', 'Contenido consolidado de la última atención registrada: ' . fechaHoraLegible($ultima['fecha_registro']) . '.');
-$camposClinicos = array(
-    'Antecedentes médicos no psiquiátricos' => $ultima['antecedentes_medicos_no_psiquiatricos'],
-    'Hospitalizaciones' => $ultima['hospitalizaciones'],
-    'Cirugías' => $ultima['cirugias'],
-    'Alergias' => $ultima['alergias'],
-    'Antecedentes médicos psiquiátricos' => $ultima['antecedentes_medicos_psiquiatricos'],
-    'Historia gineco-obstétrica' => $ultima['historia_gineco_obstetrica'],
-    'Medicamentos previos' => $ultima['medicamentos_previos'],
-    'Medicamentos actuales' => $ultima['medicamentos_actuales'],
-    'Información legal' => $ultima['legal'],
-    'Sustancias' => $ultima['sustancias'],
-    'Rasgos de personalidad relevantes' => $ultima['rasgos_personalidad'],
-    'Información adicional' => $ultima['informacion_adicional'],
-    'Pendientes' => $ultima['pendientes']
-);
-foreach ($camposClinicos as $label => $value) {
-    $pdf->field($label, $value);
-}
-
-$pdf->title('3. Evolución diagnóstica y seguimiento', 'Atenciones ordenadas por fecha, de la más reciente a la más antigua. Total: ' . count($atenciones) . '.');
-foreach ($atenciones as $atencion) {
-    $pdf->historyItem(
-        fechaHoraLegible($atencion['fecha_registro'] ?: $atencion['fecha']),
-        trim((string) $atencion['diagnostico']),
-        trim((string) $atencion['seguimiento'])
+if ($tieneAtenciones) {
+    $pdf->title('2. Historia clínica actualizada', 'Contenido consolidado de la última atención registrada: ' . fechaHoraLegible($ultima['fecha_registro']) . '.');
+    $camposClinicos = array(
+        'Antecedentes médicos no psiquiátricos' => $ultima['antecedentes_medicos_no_psiquiatricos'],
+        'Hospitalizaciones' => $ultima['hospitalizaciones'],
+        'Cirugías' => $ultima['cirugias'],
+        'Alergias' => $ultima['alergias'],
+        'Antecedentes médicos psiquiátricos' => $ultima['antecedentes_medicos_psiquiatricos'],
+        'Historia gineco-obstétrica' => $ultima['historia_gineco_obstetrica'],
+        'Medicamentos previos' => $ultima['medicamentos_previos'],
+        'Medicamentos actuales' => $ultima['medicamentos_actuales'],
+        'Información legal' => $ultima['legal'],
+        'Sustancias' => $ultima['sustancias'],
+        'Rasgos de personalidad relevantes' => $ultima['rasgos_personalidad'],
+        'Información adicional' => $ultima['informacion_adicional'],
+        'Pendientes' => $ultima['pendientes']
     );
+    foreach ($camposClinicos as $label => $value) {
+        $pdf->field($label, $value);
+    }
+
+    $pdf->title('3. Evolución diagnóstica y seguimiento', 'Atenciones ordenadas por fecha, de la más reciente a la más antigua. Total: ' . count($atenciones) . '.');
+    foreach ($atenciones as $atencion) {
+        $pdf->historyItem(
+            fechaHoraLegible($atencion['fecha_registro'] ?: $atencion['fecha']),
+            trim((string) $atencion['diagnostico']),
+            trim((string) $atencion['seguimiento'])
+        );
+    }
+} else {
+    $pdf->title('2. Historia clínica', 'Este expediente aún no cuenta con atenciones clínicas registradas para este profesional.');
+    $pdf->field('Información clínica', 'No hay información clínica registrada para este paciente.');
+
+    $pdf->title('3. Diagnóstico y seguimiento', 'La sección se habilitará automáticamente cuando exista una atención registrada.');
+    $pdf->field('Diagnóstico', 'No hay información registrada.');
+    $pdf->field('Seguimiento / evolución registrada', 'No hay información registrada.');
 }
 
 $archivo = 'Expediente_' . nombreArchivoSeguro($nombreCompleto) . '_' . date('Ymd_His') . '.pdf';
